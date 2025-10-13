@@ -10,7 +10,7 @@ services:
       POSTGRES_PASSWORD: attendance_pass
       POSTGRES_DB: attendance_db
     ports:
-      - "5432:5432"
+      - "5433:5432"  # Changed from 5432 to avoid conflict with existing postgresql container
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
@@ -24,7 +24,7 @@ services:
     image: redis:7-alpine
     container_name: attendance_redis
     ports:
-      - "6379:6379"
+      - "6380:6379"  # Changed from 6379 to avoid conflict with clearml-redis
     volumes:
       - redis_data:/data
     healthcheck:
@@ -43,7 +43,7 @@ services:
       - DATABASE_URL=postgresql+asyncpg://attendance_user:attendance_pass@db:5432/attendance_db
       - REDIS_URL=redis://redis:6379/0
     ports:
-      - "8000:8000"
+      - "8001:8000"  # Changed from 8000 to avoid conflict with portainer
     volumes:
       - ../../src/backend:/app
     depends_on:
@@ -65,7 +65,7 @@ services:
       - ../../src/frontend:/app
       - /app/node_modules
     environment:
-      - VITE_API_URL=http://localhost:8000
+      - VITE_API_URL=http://localhost:8001
     command: npm run dev -- --host
 
 volumes:
