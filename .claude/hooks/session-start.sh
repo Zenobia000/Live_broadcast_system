@@ -5,80 +5,43 @@
 # 跨平台支援：Windows (Git Bash)、Windows WSL、macOS、Linux
 
 # ============================================================================
-# 平台檢測和兼容性設置
+# 初始化與環境設定
 # ============================================================================
-
-# 檢測操作系統平台
-detect_platform() {
-    local uname_output="$(uname -s)"
-
-    # 優先檢查環境變量（更準確）
-    # WSL_DISTRO_NAME 只存在於 WSL 環境
-    if [ -n "$WSL_DISTRO_NAME" ]; then
-        echo "wsl"
-        return
-    fi
-
-    # 檢查是否在 Windows Git Bash
-    # MSYSTEM 環境變量存在於 Git Bash
-    if [ -n "$MSYSTEM" ]; then
-        echo "windows"
-        return
-    fi
-
-    # 使用 uname 判斷
-    case "$uname_output" in
-        MINGW*|MSYS*|CYGWIN*)
-            echo "windows"
-            ;;
-        Linux)
-            # 二次確認是否為 WSL
-            if grep -qi microsoft /proc/version 2>/dev/null; then
-                echo "wsl"
-            else
-                echo "linux"
-            fi
-            ;;
-        Darwin)
-            echo "macos"
-            ;;
-        *)
-            echo "unknown"
-            ;;
-    esac
-}
-
-PLATFORM=$(detect_platform)
-
-# Windows 兼容性：不使用 set -e，改為手動錯誤處理
-# set -e 會導致在 Windows 環境下任何非零退出碼都中斷執行
 
 # 跨平台路徑處理
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" 2>/dev/null && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/../.." 2>/dev/null && pwd)"
-CLAUDE_DIR="$PROJECT_ROOT/.claude"
 
-# 路徑驗證（所有平台）
-if [ -z "$PROJECT_ROOT" ] || [ -z "$CLAUDE_DIR" ]; then
-    echo "❌ 無法確定專案路徑 (Platform: $PLATFORM)" >&2
-    exit 0  # 改為 exit 0，避免中斷 Claude Code
+# 載入共用工具函數
+# shellcheck source=.claude/hooks/hook-utils.sh
+if [ -f "$SCRIPT_DIR/hook-utils.sh" ]; then
+    source "$SCRIPT_DIR/hook-utils.sh"
+else
+    echo "❌ [ERROR] Hook utilities not found at $SCRIPT_DIR/hook-utils.sh" >&2
+    exit 0
 fi
 
-# 日誌函數（跨平台兼容）
-log() {
-    local timestamp="[$(date '+%Y-%m-%d %H:%M:%S' 2>/dev/null || echo '????-??-?? ??:??:??')]"
-    echo "$timestamp $1" | tee -a "$CLAUDE_DIR/hooks.log" 2>/dev/null || echo "$timestamp $1"
-}
+# 平台檢測與執行選項設定
+PLATFORM=$(detect_platform)
+set_execution_options "$PLATFORM"
 
-log "🪝 TaskMaster Session Start Hook 觸發 (Platform: $PLATFORM)"
+CLAUDE_DIR="$PROJECT_ROOT/.claude"
+
+# 路徑驗證
+if [ -z "$PROJECT_ROOT" ] || [ -z "$CLAUDE_DIR" ]; then
+    log_error "無法確定專案路徑 (Platform: $PLATFORM)"
+    exit 0
+fi
+
+log_info "🪝 TaskMaster Session Start Hook 觸發 (Platform: $PLATFORM)"
 
 # 檢查是否存在 CLAUDE_TEMPLATE.md
 if [ -f "$PROJECT_ROOT/CLAUDE_TEMPLATE.md" ]; then
-    log "📄 偵測到 CLAUDE_TEMPLATE.md"
+    log_info "📄 偵測到 CLAUDE_TEMPLATE.md"
 
     # 檢查是否已經初始化過
     if [ ! -f "$CLAUDE_DIR/taskmaster-data/project.json" ]; then
-        log "🚀 準備自動觸發 TaskMaster 初始化"
+        log_info "🚀 準備自動觸發 TaskMaster 初始化"
 
         # 顯示提示訊息（Jobs 式極簡設計）
         echo ""
@@ -99,27 +62,15 @@ if [ -f "$PROJECT_ROOT/CLAUDE_TEMPLATE.md" ]; then
         echo -e "\033[1;37m╰─────────────────────────────────────────────────────────────╯\033[0m"
         echo ""
 
-        # 觸發 TaskMaster Node.js 處理器（Windows 兼容）
-        if [ -f "$CLAUDE_DIR/taskmaster.js" ]; then
-            log "🔗 調用 TaskMaster Node.js 處理器"
-            cd "$PROJECT_ROOT" 2>/dev/null || {
-                log "⚠️ 無法切換到專案目錄"
-                exit 0
-            }
-            # 使用 || true 確保即使 Node.js 返回非零碼也不會中斷
-            node "$CLAUDE_DIR/taskmaster.js" --hook-trigger=session-start || {
-                log "⚠️ TaskMaster 處理器執行完成 (退出碼: $?)"
-            }
-        else
-            log "⚠️ TaskMaster 核心文件不存在: $CLAUDE_DIR/taskmaster.js"
-        fi
-
+        # 觸發 TaskMaster Node.js 處理器
+        trigger_taskmaster "$PROJECT_ROOT" "session-start"
         exit 0
     else
-        log "ℹ️ TaskMaster 已初始化，跳過自動觸發"
+        log_info "ℹ️ TaskMaster 已初始化，顯示狀態摘要"
+        show_taskmaster_summary "$PROJECT_ROOT"
         exit 0
     fi
 else
-    log "ℹ️ 未偵測到 CLAUDE_TEMPLATE.md，TaskMaster 待命中"
+    log_info "ℹ️ 未偵測到 CLAUDE_TEMPLATE.md，TaskMaster 待命中"
     exit 0
 fi

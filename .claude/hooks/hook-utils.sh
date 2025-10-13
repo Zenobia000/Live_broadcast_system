@@ -36,6 +36,57 @@ log_debug() {
     fi
 }
 
+# 平台檢測和兼容性設置
+detect_platform() {
+    local uname_output
+    uname_output="$(uname -s)"
+
+    # 優先檢查環境變量（更準確）
+    # WSL_DISTRO_NAME 只存在於 WSL 環境
+    if [ -n "$WSL_DISTRO_NAME" ]; then
+        echo "wsl"
+        return
+    fi
+
+    # 檢查是否在 Windows Git Bash
+    # MSYSTEM 環境變量存在於 Git Bash
+    if [ -n "$MSYSTEM" ]; then
+        echo "windows"
+        return
+    fi
+
+    # 使用 uname 判斷
+    case "$uname_output" in
+        MINGW*|MSYS*|CYGWIN*)
+            echo "windows"
+            ;;
+        Linux)
+            # 二次確認是否為 WSL
+            if grep -qi microsoft /proc/version 2>/dev/null; then
+                echo "wsl"
+            else
+                echo "linux"
+            fi
+            ;;
+        Darwin)
+            echo "macos"
+            ;;
+        *)
+            echo "unknown"
+            ;;
+    esac
+}
+
+# 根據平台設置執行選項
+set_execution_options() {
+    local platform="$1"
+    # 在 Windows Git Bash (MSYS) 環境中，set -e 行為可能不如預期
+    # 因此僅在非 Windows 環境下啟用 (WSL, Linux, macOS)
+    if [ "$platform" != "windows" ]; then
+        set -e
+    fi
+}
+
 # 檢查必要檔案是否存在
 check_required_files() {
     local project_root="$1"

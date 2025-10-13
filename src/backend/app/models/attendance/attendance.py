@@ -12,7 +12,7 @@ from datetime import datetime
 from typing import TYPE_CHECKING, Optional
 from uuid import UUID
 
-from sqlalchemy import ForeignKey, String, Text, UniqueConstraint
+from sqlalchemy import ForeignKey, Index, String, Text, text
 from sqlalchemy.dialects.postgresql import UUID as PG_UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy import DateTime
@@ -54,10 +54,11 @@ class Attendance(Base, UUIDMixin, TimestampMixin, SoftDeleteMixin):
 
     __tablename__ = "attendance"
     __table_args__ = (
-        UniqueConstraint(
+        Index(
+            "idx_unique_user_event_active",
             "user_id", "event_id",
-            name="unique_user_event",
-            postgresql_where=deleted_at.is_(None)  # Only for non-deleted records
+            unique=True,
+            postgresql_where=text("deleted_at IS NULL")  # Only for non-deleted records
         ),
         {"comment": "Attendance records linking users to events with status tracking"}
     )
