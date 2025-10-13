@@ -1,0 +1,42 @@
+{
+  "project_name": "Smart Attendance System",
+  "project_name_zh": "智能簽到系統",
+  "version": "0.1.0",
+  "initialized_at": "2025-10-14T01:15:00Z",
+  "taskmaster_mode": "LOW",
+  "coordination_strategy": "Hybrid",
+  "complexity": "MEDIUM-HIGH",
+  "tech_stack": {
+    "frontend": "React + Vite + Tailwind CSS",
+    "backend": "Python/FastAPI + PostgreSQL",
+    "auth": "Google OAuth 2.0",
+    "integrations": ["Google Calendar API", "Email", "Slack"],
+    "deployment": ["Docker", "Google Cloud Run", "Vercel"]
+  },
+  "phases": {
+    "phase1_prd": {
+      "name": "PRD 文檔",
+      "status": "completed",
+      "progress": 100
+    },
+    "phase2_architecture": {
+      "name": "架構設計",
+      "status": "completed",
+      "progress": 80
+    },
+    "phase3_setup": {
+      "name": "專案設置",
+      "status": "in_progress",
+      "progress": 40
+    },
+    "phase4_development": {
+      "name": "功能開發",
+      "status": "pending",
+      "progress": 0
+    }
+  },
+  "estimated_hours": 50,
+  "completed_tasks": 4,
+  "total_tasks": 45,
+  "success_probability": 85
+}

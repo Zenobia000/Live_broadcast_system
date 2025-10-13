@@ -77,7 +77,7 @@
 
 *   **通用語言 (Ubiquitous Language):**
     *   **Event**: 指一個需要記錄出缺勤的活動，如會議、課程。
-    *   **Attendance**: 記錄某位 `User` 對於某個 `Event` 的出席狀態 (`Present`, `Late`, `Absent`, `Leave`)。
+    *   **Attendance**: 記錄某位 `User` 對於某個 `Event` 的出席狀態 (`Present`, `Late`, `Absent`, `Leave`, `EarlyLeave`)。
     *   **Leave Request**: 成員提交的請假申請，包含假別、事由、時間。
     *   **Makeup Request**: 成員提交的補簽申請。
     *   **Policy**: 系統用來自動判斷狀態（如遲到）的規則。
@@ -139,7 +139,7 @@
     *   此流程由後端事件觸發，而非直接由前端 API 呼叫。主要涉及 `/auth/login` 端點成功後觸發的內部流程。
     *   **-> 參考: [API 設計規格](./04_api_design_specification.md)**
 *   **資料模型 (Data Model)**:
-    *   `attendance` Table: `id`, `user_id`, `event_id`, `status` (`PRESENT`, `LATE`, `ABSENT`), `timestamp`.
+    *   `attendance` Table: `id`, `user_id`, `event_id`, `status` (`PRESENT`, `LATE`, `ABSENT`, `LEAVE`, `MAKEUP`, `EARLY_LEAVE`), `timestamp`.
 *   **關鍵流程 (Sequence Diagram)**:
     ```mermaid
     sequenceDiagram
@@ -154,13 +154,16 @@
         Frontend->>AuthService: POST /auth/google/callback
         AuthService->>AuthService: 驗證 Token, 取得或創建 User
         alt 登入成功
-            AuthService->>CalendarService: 異步查詢當前活動 GetCurrentEvent(user)
-            CalendarService-->>AttendanceService: 返回 Event
-            AttendanceService->>AttendanceService: 判斷是否遲到
-            AttendanceService->>DB: 寫入/更新 attendance 記錄 (status=PRESENT/LATE)
+            AuthService->>CalendarService: 異步查詢當前活動 GetCurrentEvents(user)
+            CalendarService-->>AttendanceService: 返回 Event 列表 [event1, event2]
+            loop 為每個活動記錄
+                AttendanceService->>AttendanceService: 判斷 event 是否遲到
+                AttendanceService->>DB: 寫入/更新 attendance 記錄 (status=PRESENT/LATE)
+            end
             AuthService-->>Frontend: 返回登入成功 Session/JWT
             Frontend-->>User: 顯示儀表板與「簽到成功」訊息
         end
+    end
     ```
 
 ### 2.3 非功能性需求設計 (NFRs Design)
@@ -176,3 +179,5 @@
 *   **可擴展性 (Scalability)**:
     *   後端服務設計為無狀態 (Stateless)，可透過 Cloud Run 進行水平擴展。
     *   非同步通知任務將由獨立的 Worker 處理，可獨立擴展。
+*   **可靠性 (Reliability)**:
+    *   簽到、請假等核心操作應設計為冪等的，以防止網路問題導致的重複請求產生非預期副作用。

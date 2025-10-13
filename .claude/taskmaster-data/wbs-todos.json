@@ -1,0 +1,206 @@
+{
+  "project": "Smart Attendance System",
+  "last_updated": "2025-10-14T01:20:00Z",
+  "total_tasks": 45,
+  "completed": 4,
+  "in_progress": 1,
+  "pending": 40,
+  "phases": [
+    {
+      "id": "phase1",
+      "name": "文檔完善 (Document Completion)",
+      "progress": 40,
+      "tasks": [
+        {
+          "id": "1.1",
+          "content": "PRD 文檔審查與確認",
+          "status": "completed",
+          "estimated_hours": 0.5,
+          "completed_at": "2025-10-13"
+        },
+        {
+          "id": "1.2",
+          "content": "架構設計文檔審查",
+          "status": "completed",
+          "estimated_hours": 0.75,
+          "completed_at": "2025-10-13"
+        },
+        {
+          "id": "1.3",
+          "content": "完成模組規格文檔",
+          "status": "pending",
+          "estimated_hours": 2,
+          "priority": "high"
+        },
+        {
+          "id": "1.4",
+          "content": "建立 BDD 測試場景",
+          "status": "pending",
+          "estimated_hours": 1.5,
+          "priority": "medium"
+        },
+        {
+          "id": "1.5",
+          "content": "撰寫部署與維運文檔",
+          "status": "pending",
+          "estimated_hours": 1,
+          "priority": "low"
+        }
+      ]
+    },
+    {
+      "id": "phase2",
+      "name": "專案基礎設置 (Project Setup)",
+      "progress": 60,
+      "tasks": [
+        {
+          "id": "2.1",
+          "content": "建立專案目錄結構",
+          "status": "completed",
+          "estimated_hours": 0.33,
+          "completed_at": "2025-10-14"
+        },
+        {
+          "id": "2.2",
+          "content": "初始化後端專案 (FastAPI)",
+          "status": "completed",
+          "estimated_hours": 0.5,
+          "completed_at": "2025-10-14"
+        },
+        {
+          "id": "2.3",
+          "content": "初始化前端專案 (React + Vite)",
+          "status": "pending",
+          "estimated_hours": 0.5,
+          "priority": "high"
+        },
+        {
+          "id": "2.4",
+          "content": "設置 PostgreSQL 開發環境",
+          "status": "pending",
+          "estimated_hours": 0.5,
+          "priority": "high"
+        },
+        {
+          "id": "2.5",
+          "content": "配置 Docker 容器化",
+          "status": "in_progress",
+          "estimated_hours": 0.75,
+          "priority": "high"
+        },
+        {
+          "id": "2.6",
+          "content": "設置 Git 工作流程與 GitHub",
+          "status": "pending",
+          "estimated_hours": 0.25,
+          "priority": "medium"
+        },
+        {
+          "id": "2.7",
+          "content": "建立 CI/CD 基礎配置",
+          "status": "pending",
+          "estimated_hours": 1,
+          "priority": "low"
+        }
+      ]
+    },
+    {
+      "id": "phase3",
+      "name": "認證與核心基礎 (Auth & Core Foundation)",
+      "progress": 0,
+      "tasks": [
+        {
+          "id": "3.1",
+          "content": "實作 Google OAuth 2.0 整合",
+          "status": "pending",
+          "estimated_hours": 2,
+          "priority": "critical"
+        },
+        {
+          "id": "3.2",
+          "content": "建立 JWT Token 機制",
+          "status": "pending",
+          "estimated_hours": 1,
+          "priority": "critical"
+        },
+        {
+          "id": "3.3",
+          "content": "實作 User 資料模型與 Repository",
+          "status": "pending",
+          "estimated_hours": 1,
+          "priority": "high"
+        },
+        {
+          "id": "3.4",
+          "content": "建立 RBAC 授權系統",
+          "status": "pending",
+          "estimated_hours": 1.5,
+          "priority": "high"
+        },
+        {
+          "id": "3.5",
+          "content": "實作登入/登出 API 端點",
+          "status": "pending",
+          "estimated_hours": 1,
+          "priority": "high"
+        }
+      ]
+    },
+    {
+      "id": "phase4",
+      "name": "自動簽到核心功能 (Auto Check-in)",
+      "progress": 0,
+      "tasks": [
+        {
+          "id": "4.1",
+          "content": "實作 Attendance 資料模型",
+          "status": "pending",
+          "estimated_hours": 1,
+          "priority": "critical"
+        },
+        {
+          "id": "4.2",
+          "content": "建立事件驅動的自動簽到邏輯",
+          "status": "pending",
+          "estimated_hours": 2,
+          "priority": "critical"
+        },
+        {
+          "id": "4.3",
+          "content": "整合 Google Calendar API",
+          "status": "pending",
+          "estimated_hours": 2,
+          "priority": "critical"
+        },
+        {
+          "id": "4.4",
+          "content": "實作遲到判斷策略",
+          "status": "pending",
+          "estimated_hours": 1,
+          "priority": "high"
+        },
+        {
+          "id": "4.5",
+          "content": "建立自動簽到 API 端點",
+          "status": "pending",
+          "estimated_hours": 1,
+          "priority": "high"
+        }
+      ]
+    }
+  ],
+  "next_recommended_tasks": [
+    {
+      "id": "2.3",
+      "reason": "前端開發環境是並行開發的基礎"
+    },
+    {
+      "id": "2.4",
+      "reason": "資料庫是後端開發的必要依賴"
+    },
+    {
+      "id": "1.3",
+      "reason": "完善文檔有助於後續開發"
+    }
+  ]
+}

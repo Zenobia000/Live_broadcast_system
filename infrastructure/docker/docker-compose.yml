@@ -1,0 +1,73 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database
+  db:
+    image: postgres:16-alpine
+    container_name: attendance_db
+    environment:
+      POSTGRES_USER: attendance_user
+      POSTGRES_PASSWORD: attendance_pass
+      POSTGRES_DB: attendance_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U attendance_user"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Redis Cache
+  redis:
+    image: redis:7-alpine
+    container_name: attendance_redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Backend API (Development)
+  backend:
+    build:
+      context: ../../src/backend
+      dockerfile: ../../infrastructure/docker/Dockerfile.backend
+    container_name: attendance_backend
+    environment:
+      - DATABASE_URL=postgresql+asyncpg://attendance_user:attendance_pass@db:5432/attendance_db
+      - REDIS_URL=redis://redis:6379/0
+    ports:
+      - "8000:8000"
+    volumes:
+      - ../../src/backend:/app
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+
+  # Frontend (Development)
+  frontend:
+    build:
+      context: ../../src/frontend
+      dockerfile: ../../infrastructure/docker/Dockerfile.frontend
+    container_name: attendance_frontend
+    ports:
+      - "5173:5173"
+    volumes:
+      - ../../src/frontend:/app
+      - /app/node_modules
+    environment:
+      - VITE_API_URL=http://localhost:8000
+    command: npm run dev -- --host
+
+volumes:
+  postgres_data:
+  redis_data:

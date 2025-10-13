@@ -32,10 +32,10 @@
 ### 規格 1: `record_auto_attendance`
 
 **簽名 (Signature)**:
-`record_auto_attendance(user_id: str, login_time: datetime) -> Optional[Attendance]`
+`record_auto_attendance(user_id: str, login_time: datetime) -> List[Attendance]`
 
 **描述 (Description)**:
-根據使用者登入時間，尋找對應的當前活動。如果找到活動，則根據系統的遲到策略計算出勤狀態（出席或遲到），並創建或更新一筆出勤記錄。
+根據使用者登入時間，尋找所有對應的當前活動。對於每一個找到的活動，都根據系統的遲到策略計算出勤狀態（出席或遲到），並創建或更新一筆出勤記錄。
 
 **契約式設計 (Design by Contract, DbC)**:
 *   **前置條件 (Preconditions)**:
@@ -43,12 +43,12 @@
     2.  `login_time` 是一個有效的 `datetime` 物件。
 *   **後置條件 (Postconditions)**:
     1.  **若找到相關活動**:
-        *   資料庫中會存在一筆對應 `user_id` 和 `event_id` 的 `Attendance` 記錄。
-        *   該記錄的 `status` 會根據 `login_time` 和 `event.start_time` 被設為 `PRESENT` 或 `LATE`。
-        *   函式返回被創建或更新的 `Attendance` 物件。
+        *   對於每一個時間點匹配的活動，資料庫中都會存在一筆對應 `user_id` 和 `event_id` 的 `Attendance` 記錄。
+        *   每筆記錄的 `status` 會根據 `login_time` 和 `event.start_time` 被設為 `PRESENT` 或 `LATE`。
+        *   函式返回一個包含所有被創建或更新的 `Attendance` 物件的列表。
     2.  **若未找到相關活動**:
         *   資料庫中不會創建任何新的 `Attendance` 記錄。
-        *   函式返回 `None`。
+        *   函式返回一個空列表 `[]`。
 *   **不變性 (Invariants)**:
     1.  一個使用者在同一個活動中，永遠只會有一筆最終的出勤記錄。
 
@@ -118,5 +118,18 @@
         *   資料庫中已存在 `damon@workspace.com` 在 `每日站立會議` 的 `PRESENT` 記錄。
     2.  **Act**: 再次呼叫 `record_auto_attendance(user_id="damon_id", login_time="2025-10-14 09:02")`。
     3.  **Assert**:
-        *   驗證函式返回已存在的那筆 `Attendance` 物件。
+        *   驗證函式返回一個只包含一個元素的列表，且該元素為已存在的那筆 `Attendance` 物件。
         *   驗證資料庫中 `Attendance` 記錄總數未增加。
+
+#### 情境 6: 衝突 - 多活動重疊
+
+*   **測試案例 ID**: `TC-AA-006`
+*   **描述**: 使用者登入時，其時間點同時落入兩個或多個活動的區間內。
+*   **測試步驟 (Arrange-Act-Assert)**:
+    1.  **Arrange**:
+        *   資料庫中存在活動 `每日站立會議` (`09:00`-`09:15`)。
+        *   資料庫中同時存在活動 `專案同步會議` (`09:00`-`10:00`)。
+    2.  **Act**: 呼叫 `record_auto_attendance(user_id="damon_id", login_time="2025-10-14 09:03")`。
+    3.  **Assert**:
+        *   驗證函式返回一個包含**兩個** `Attendance` 物件的列表。
+        *   驗證資料庫中新增了兩筆分別對應 `每日站立會議` 和 `專案同步會議` 的 `PRESENT` 記錄。

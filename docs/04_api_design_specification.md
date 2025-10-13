@@ -81,7 +81,7 @@
       }
     }
     ```
-*   **通用 HTTP 狀態碼:** `400 Bad Request`, `401 Unauthorized`, `403 Forbidden`, `404 Not Found`, `500 Internal Server Error`。
+*   **通用 HTTP 狀態碼:** `400 Bad Request`, `401 Unauthorized`, `403 Forbidden`, `404 Not Found`, `409 Conflict`, `500 Internal Server Error`。
 
 ---
 
@@ -119,6 +119,8 @@
 *   **授權:** `member`
 *   **請求體:** `MakeupRequestCreate`
 *   **成功回應 (201 Created):** `MakeupRequest`
+*   **錯誤回應:**
+    *   `409 Conflict`: 如果該活動的 `Attendance` 狀態已為 `PRESENT` 或 `LEAVE`。
 
 ---
 
@@ -150,7 +152,7 @@
 
 #### `POST /admin/requests/{request_id}/reject`
 *   **描述:** 駁回一筆申請。
-*   **請求體:** `{ "reason": "string" }` (可選)
+*   **請求體:** `{ "reason": "string" }` (必填)
 *   **成功回應 (204 No Content):**
 
 ---
@@ -174,25 +176,20 @@
   "id": "attendance_string_id",
   "user_id": "user_string_id",
   "event_id": "event_string_id",
-  "status": "PRESENT" // PRESENT, LATE, ABSENT, LEAVE, MAKEUP
+  "status": "PRESENT" // PRESENT, LATE, ABSENT, LEAVE, MAKEUP, EARLY_LEAVE
 }
 ```
 
 ### `LeaveRequestCreate` (Request Body)
 ```json
 {
-  "event_id": "event_string_id",
+  "event_id": "string (required)",
   "type": "SICK_LEAVE", // SICK_LEAVE, PERSONAL_LEAVE
-  "reason": "身體不適",
-  "start_time": "2025-10-14T09:00:00Z",
-  "end_time": "2025-10-14T09:15:00Z"
+  "reason": "string (required)",
+  "start_time": "string (date-time, optional)",
+  "end_time": "string (date-time, optional)"
 }
 ```
 
 ### `MakeupRequestCreate` (Request Body)
-```json
-{
-  "event_id": "event_string_id",
-  "reason": "網路問題"
-}
 ```
