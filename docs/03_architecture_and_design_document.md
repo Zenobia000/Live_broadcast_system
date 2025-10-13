@@ -139,7 +139,8 @@
     *   此流程由後端事件觸發，而非直接由前端 API 呼叫。主要涉及 `/auth/login` 端點成功後觸發的內部流程。
     *   **-> 參考: [API 設計規格](./04_api_design_specification.md)**
 *   **資料模型 (Data Model)**:
-    *   `attendance` Table: `id`, `user_id`, `event_id`, `status` (`PRESENT`, `LATE`, `ABSENT`, `LEAVE`, `MAKEUP`, `EARLY_LEAVE`), `timestamp`.
+    *   **完整 ER 圖請參閱下方 2.2.1 節**
+    *   核心表: `user`, `event`, `attendance`, `leave_request`, `makeup_request`.
 *   **關鍵流程 (Sequence Diagram)**:
     ```mermaid
     sequenceDiagram
@@ -165,6 +166,148 @@
         end
     end
     ```
+
+#### 2.2.1 資料庫 ER 圖 (Entity-Relationship Diagram)
+
+*完整的資料模型設計，遵循 DDD 限界上下文劃分與 Clean Architecture 原則。*
+
+**設計原則**:
+- ✅ 每個實體職責單一明確 (Single Responsibility)
+- ✅ 使用 UUID 作為主鍵，支援分散式系統
+- ✅ 軟刪除僅用於核心業務表 (Attendance, LeaveRequest, MakeupRequest)
+- ✅ `UNIQUE(user_id, event_id)` 約束防止重複簽到記錄
+
+**ER 圖**:
+
+```mermaid
+erDiagram
+    %% ==========================================
+    %% User Management Context
+    %% ==========================================
+    User {
+        uuid id PK "主鍵"
+        string email UK "Google OAuth 郵箱 (唯一)"
+        string name "使用者名稱"
+        string google_id UK "Google OAuth ID (唯一)"
+        string avatar_url "頭像 URL (可選)"
+        enum role "角色: MEMBER, ADMIN"
+        timestamp created_at "建立時間"
+        timestamp updated_at "更新時間"
+    }
+
+    %% ==========================================
+    %% Scheduling Context
+    %% ==========================================
+    Event {
+        uuid id PK "主鍵"
+        string title "活動標題"
+        text description "活動描述 (可選)"
+        timestamp start_time "開始時間"
+        timestamp end_time "結束時間"
+        int grace_period_minutes "寬限期 (分鐘, 預設 5)"
+        string google_event_id UK "Google Calendar Event ID (唯一)"
+        uuid created_by FK "創建者 (User.id, nullable - 系統同步時為 NULL)"
+        timestamp created_at "建立時間"
+        timestamp updated_at "更新時間"
+    }
+
+    %% ==========================================
+    %% Attendance Context (核心)
+    %% ==========================================
+    Attendance {
+        uuid id PK "主鍵"
+        uuid user_id FK "使用者 (User.id)"
+        uuid event_id FK "活動 (Event.id)"
+        enum status "狀態: PRESENT, LATE, ABSENT, LEAVE, MAKEUP, EARLY_LEAVE"
+        timestamp check_in_time "簽到時間 (可選)"
+        text note "備註 (補簽/請假原因, 可選)"
+        timestamp deleted_at "軟刪除時間 (可選)"
+        timestamp created_at "建立時間"
+        timestamp updated_at "更新時間"
+        unique user_event_idx "UNIQUE(user_id, event_id) - 防止重複簽到"
+    }
+
+    %% ==========================================
+    %% Leave & Makeup Request Context
+    %% ==========================================
+    LeaveRequest {
+        uuid id PK "主鍵"
+        uuid user_id FK "申請人 (User.id)"
+        uuid event_id FK "活動 (Event.id)"
+        enum leave_type "假別: SICK, PERSONAL, OFFICIAL, OTHER"
+        text reason "請假事由"
+        timestamp start_time "請假開始時間"
+        timestamp end_time "請假結束時間"
+        enum status "審核狀態: PENDING, APPROVED, REJECTED"
+        uuid reviewed_by FK "審核者 (User.id, nullable - 待審核時為 NULL)"
+        text review_note "審核備註 (可選)"
+        timestamp reviewed_at "審核時間 (可選)"
+        timestamp deleted_at "軟刪除時間 (可選)"
+        timestamp created_at "建立時間"
+        timestamp updated_at "更新時間"
+    }
+
+    MakeupRequest {
+        uuid id PK "主鍵"
+        uuid user_id FK "申請人 (User.id)"
+        uuid event_id FK "活動 (Event.id)"
+        text reason "補簽原因"
+        enum status "審核狀態: PENDING, APPROVED, REJECTED"
+        uuid reviewed_by FK "審核者 (User.id, nullable - 待審核時為 NULL)"
+        text review_note "審核備註 (可選)"
+        timestamp reviewed_at "審核時間 (可選)"
+        timestamp deleted_at "軟刪除時間 (可選)"
+        timestamp created_at "建立時間"
+        timestamp updated_at "更新時間"
+    }
+
+    %% ==========================================
+    %% Relationships (關聯關係)
+    %% ==========================================
+    User ||--o{ Event : "creates (創建活動, nullable)"
+    User ||--o{ Attendance : "has (擁有簽到記錄)"
+    Event ||--o{ Attendance : "contains (包含簽到記錄)"
+
+    User ||--o{ LeaveRequest : "submits (提交請假申請)"
+    Event ||--o{ LeaveRequest : "receives (接收請假申請)"
+    User ||--o{ LeaveRequest : "reviews (審核請假申請, nullable)"
+
+    User ||--o{ MakeupRequest : "submits (提交補簽申請)"
+    Event ||--o{ MakeupRequest : "receives (接收補簽申請)"
+    User ||--o{ MakeupRequest : "reviews (審核補簽申請, nullable)"
+```
+
+**關鍵設計決策 (ADR-002: Database Schema Design)**:
+
+1. **為何分離 `LeaveRequest` 與 `MakeupRequest`？**
+   - 請假與補簽是不同的業務流程，狀態機不同
+   - 請假影響未來事件，補簽修正過去記錄
+   - 分離避免 `if type == 'leave' then ... else ...` 的特殊判斷 (Linus: "Good taste")
+
+2. **為何使用 `enum status` 而非布林標記？**
+   - 單一欄位表達所有狀態，無需多個布林欄位組合
+   - 避免 `is_present AND is_late` 這種邏輯矛盾
+   - 擴展新狀態時無需修改表結構 (Open-Closed Principle)
+
+3. **為何 `Attendance` 不直接關聯到 `LeaveRequest`？**
+   - `Attendance` 是事實記錄 (what happened)
+   - `LeaveRequest` 是申請流程 (what's requested)
+   - 解耦使狀態變更更簡單：審核通過後直接更新 `Attendance.status = 'LEAVE'`
+
+4. **為何僅核心表使用軟刪除？**
+   - 審計需求僅針對核心業務記錄 (Attendance, LeaveRequest, MakeupRequest)
+   - `User` 與 `Event` 表應該永不刪除，僅標記為 inactive (未來擴展)
+
+5. **為何 `Event.created_by` 允許 nullable？**
+   - 活動可能來自 Google Calendar 系統自動同步
+   - Nullable 避免創建虛擬「系統使用者」(Linus: "Simplicity")
+
+**索引策略 (Performance Optimization)**:
+- `User.email`, `User.google_id`: 唯一索引 (UK)
+- `Event.google_event_id`: 唯一索引 (UK)
+- `Attendance(user_id, event_id)`: 複合唯一索引 (防重複 + 查詢優化)
+- `LeaveRequest.status`, `MakeupRequest.status`: 一般索引 (審核查詢)
+- `Attendance.deleted_at`, `LeaveRequest.deleted_at`, `MakeupRequest.deleted_at`: 軟刪除過濾索引
 
 ### 2.3 非功能性需求設計 (NFRs Design)
 
