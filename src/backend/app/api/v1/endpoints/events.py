@@ -31,7 +31,7 @@ router = APIRouter()
 @router.get("/upcoming", response_model=UpcomingEventsResponse)
 async def get_upcoming_events(
     hours_ahead: int = 24,
-    current_user: CurrentUser = Depends()
+    current_user: CurrentUser
 ):
     """Get upcoming events.
 
