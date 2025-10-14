@@ -73,6 +73,33 @@ class Settings(BaseSettings):
         description="Google Calendar ID for event synchronization"
     )
 
+    # Email Settings
+    SMTP_HOST: str = Field(
+        default="smtp.gmail.com",
+        description="SMTP server host"
+    )
+
+    SMTP_PORT: int = Field(
+        default=587,
+        description="SMTP server port"
+    )
+
+    SMTP_USER: Optional[str] = Field(
+        default=None,
+        description="SMTP username"
+    )
+
+    SMTP_PASSWORD: Optional[str] = Field(
+        default=None,
+        description="SMTP password"
+    )
+
+    # Slack Integration
+    SLACK_WEBHOOK_URL: Optional[str] = Field(
+        default=None,
+        description="Slack webhook URL for notifications"
+    )
+
     class Config:
         env_file = ".env"
         case_sensitive = True

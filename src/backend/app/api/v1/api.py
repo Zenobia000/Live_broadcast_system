@@ -6,7 +6,7 @@ Aggregates all v1 API endpoints into a single router.
 
 from fastapi import APIRouter
 
-from app.api.v1.endpoints import attendance, auth, events
+from app.api.v1.endpoints import attendance, auth, events, requests
 
 api_router = APIRouter()
 
@@ -29,4 +29,11 @@ api_router.include_router(
     attendance.router,
     prefix="/attendance",
     tags=["attendance"]
+)
+
+# Leave and Makeup request endpoints
+api_router.include_router(
+    requests.router,
+    prefix="/requests",
+    tags=["requests"]
 )
