@@ -27,16 +27,10 @@ const Input = React.forwardRef<HTMLInputElement, InputProps>(
 
     return (
       <div className="w-full">
-        {label && (
-          <label className="block text-sm font-medium text-gray-700 mb-1.5">
-            {label}
-          </label>
-        )}
+        {label && <label className="block text-sm font-medium text-gray-700 mb-1.5">{label}</label>}
         <div className="relative">
           {leftIcon && (
-            <div className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
-              {leftIcon}
-            </div>
+            <div className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">{leftIcon}</div>
           )}
           <input
             ref={ref}
@@ -45,7 +39,9 @@ const Input = React.forwardRef<HTMLInputElement, InputProps>(
               ${errorStyles}
               ${iconPadding}
               ${className}
-            `.replace(/\s+/g, ' ').trim()}
+            `
+              .replace(/\s+/g, ' ')
+              .trim()}
             {...props}
           />
           {rightIcon && (
@@ -54,12 +50,8 @@ const Input = React.forwardRef<HTMLInputElement, InputProps>(
             </div>
           )}
         </div>
-        {error && (
-          <p className="mt-1.5 text-sm text-error">{error}</p>
-        )}
-        {helperText && !error && (
-          <p className="mt-1.5 text-sm text-gray-500">{helperText}</p>
-        )}
+        {error && <p className="mt-1.5 text-sm text-error">{error}</p>}
+        {helperText && !error && <p className="mt-1.5 text-sm text-gray-500">{helperText}</p>}
       </div>
     )
   }

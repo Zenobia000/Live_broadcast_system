@@ -84,7 +84,9 @@ const Button: React.FC<ButtonProps> = ({
         ${sizeStyles[size]}
         ${widthStyle}
         ${className}
-      `.replace(/\s+/g, ' ').trim()}
+      `
+        .replace(/\s+/g, ' ')
+        .trim()}
       disabled={disabled || loading}
       {...props}
     >

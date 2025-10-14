@@ -24,12 +24,8 @@ const ComponentShowcase: React.FC = () => {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Header */}
         <div className="mb-8">
-          <h1 className="text-4xl font-bold text-gray-900 mb-2">
-            🎨 Apple-Style UI Components
-          </h1>
-          <p className="text-lg text-gray-600">
-            智能簽到系統 - 組件展示與測試
-          </p>
+          <h1 className="text-4xl font-bold text-gray-900 mb-2">🎨 Apple-Style UI Components</h1>
+          <p className="text-lg text-gray-600">智能簽到系統 - 組件展示與測試</p>
         </div>
 
         {/* Buttons Section */}
@@ -72,7 +68,9 @@ const ComponentShowcase: React.FC = () => {
                   <Button loading={loading} onClick={handleLoadingDemo}>
                     {loading ? 'Loading...' : 'Click to Load'}
                   </Button>
-                  <Button fullWidth className="max-w-xs">Full Width</Button>
+                  <Button fullWidth className="max-w-xs">
+                    Full Width
+                  </Button>
                 </div>
               </div>
             </div>
@@ -105,7 +103,9 @@ const ComponentShowcase: React.FC = () => {
                   <p className="text-gray-600">包含 Header、Body 和 Footer 的完整卡片。</p>
                 </CardBody>
                 <CardFooter>
-                  <Button size="sm" variant="primary">操作</Button>
+                  <Button size="sm" variant="primary">
+                    操作
+                  </Button>
                 </CardFooter>
               </Card>
             </div>
@@ -120,18 +120,19 @@ const ComponentShowcase: React.FC = () => {
           </CardHeader>
           <CardBody>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <Input
-                label="基礎輸入"
-                placeholder="請輸入文字..."
-                helperText="這是輔助說明文字"
-              />
+              <Input label="基礎輸入" placeholder="請輸入文字..." helperText="這是輔助說明文字" />
 
               <Input
                 label="帶圖標輸入"
                 placeholder="搜尋..."
                 leftIcon={
                   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+                    />
                   </svg>
                 }
               />
@@ -144,12 +145,7 @@ const ComponentShowcase: React.FC = () => {
                 onChange={(e) => setInputValue(e.target.value)}
               />
 
-              <Input
-                label="禁用狀態"
-                placeholder="無法輸入"
-                disabled
-                value="Disabled Input"
-              />
+              <Input label="禁用狀態" placeholder="無法輸入" disabled value="Disabled Input" />
             </div>
           </CardBody>
         </Card>
@@ -179,9 +175,15 @@ const ComponentShowcase: React.FC = () => {
               <div>
                 <h3 className="text-sm font-medium text-gray-700 mb-3">帶圓點徽章</h3>
                 <div className="flex flex-wrap gap-3">
-                  <Badge variant="success" dot>線上</Badge>
-                  <Badge variant="warning" dot>忙碌</Badge>
-                  <Badge variant="error" dot>離線</Badge>
+                  <Badge variant="success" dot>
+                    線上
+                  </Badge>
+                  <Badge variant="warning" dot>
+                    忙碌
+                  </Badge>
+                  <Badge variant="error" dot>
+                    離線
+                  </Badge>
                 </div>
               </div>
 
@@ -212,9 +214,15 @@ const ComponentShowcase: React.FC = () => {
               <div>
                 <h3 className="text-sm font-medium text-gray-700 mb-3">徽章尺寸</h3>
                 <div className="flex items-center gap-3">
-                  <Badge variant="primary" size="sm">Small</Badge>
-                  <Badge variant="primary" size="md">Medium</Badge>
-                  <Badge variant="primary" size="lg">Large</Badge>
+                  <Badge variant="primary" size="sm">
+                    Small
+                  </Badge>
+                  <Badge variant="primary" size="md">
+                    Medium
+                  </Badge>
+                  <Badge variant="primary" size="lg">
+                    Large
+                  </Badge>
                 </div>
               </div>
             </div>
@@ -238,12 +246,20 @@ const ComponentShowcase: React.FC = () => {
                   </div>
                   <StatusBadge status="PRESENT" />
                 </div>
-                <p className="text-sm text-gray-600 mb-3">
-                  討論專案進度與下週規劃
-                </p>
+                <p className="text-sm text-gray-600 mb-3">討論專案進度與下週規劃</p>
                 <div className="flex items-center text-sm text-gray-500">
-                  <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  <svg
+                    className="w-4 h-4 mr-1"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
+                    />
                   </svg>
                   簽到時間: 13:58
                 </div>
@@ -258,12 +274,20 @@ const ComponentShowcase: React.FC = () => {
                   </div>
                   <StatusBadge status="LATE" />
                 </div>
-                <p className="text-sm text-gray-600 mb-3">
-                  前端架構設計分享
-                </p>
+                <p className="text-sm text-gray-600 mb-3">前端架構設計分享</p>
                 <div className="flex items-center text-sm text-warning">
-                  <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  <svg
+                    className="w-4 h-4 mr-1"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
+                    />
                   </svg>
                   簽到時間: 16:07
                 </div>

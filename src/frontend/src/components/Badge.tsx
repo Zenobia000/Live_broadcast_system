@@ -55,13 +55,12 @@ const Badge: React.FC<BadgeProps> = ({
         ${variantStyles[variant]}
         ${sizeStyles[size]}
         ${className}
-      `.replace(/\s+/g, ' ').trim()}
+      `
+        .replace(/\s+/g, ' ')
+        .trim()}
     >
       {dot && (
-        <span
-          className={`w-2 h-2 rounded-full ${dotColorStyles[variant]}`}
-          aria-hidden="true"
-        />
+        <span className={`w-2 h-2 rounded-full ${dotColorStyles[variant]}`} aria-hidden="true" />
       )}
       {children}
     </span>
@@ -69,12 +68,25 @@ const Badge: React.FC<BadgeProps> = ({
 }
 
 export interface StatusBadgeProps {
-  status: 'PRESENT' | 'LATE' | 'ABSENT' | 'LEAVE' | 'MAKEUP' | 'EARLY_LEAVE' | 'PENDING' | 'APPROVED' | 'REJECTED'
+  status:
+    | 'PRESENT'
+    | 'LATE'
+    | 'ABSENT'
+    | 'LEAVE'
+    | 'MAKEUP'
+    | 'EARLY_LEAVE'
+    | 'PENDING'
+    | 'APPROVED'
+    | 'REJECTED'
   size?: BadgeSize
   className?: string
 }
 
-export const StatusBadge: React.FC<StatusBadgeProps> = ({ status, size = 'md', className = '' }) => {
+export const StatusBadge: React.FC<StatusBadgeProps> = ({
+  status,
+  size = 'md',
+  className = '',
+}) => {
   const statusConfig = {
     PRESENT: { label: '出席', variant: 'success' as BadgeVariant, dot: true },
     LATE: { label: '遲到', variant: 'warning' as BadgeVariant, dot: true },
@@ -90,12 +102,7 @@ export const StatusBadge: React.FC<StatusBadgeProps> = ({ status, size = 'md', c
   const config = statusConfig[status]
 
   return (
-    <Badge
-      variant={config.variant}
-      size={size}
-      dot={config.dot}
-      className={className}
-    >
+    <Badge variant={config.variant} size={size} dot={config.dot} className={className}>
       {config.label}
     </Badge>
   )

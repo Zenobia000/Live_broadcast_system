@@ -7,21 +7,18 @@ export interface CardProps {
   onClick?: () => void
 }
 
-const Card: React.FC<CardProps> = ({
-  children,
-  className = '',
-  hover = false,
-  onClick
-}) => {
+const Card: React.FC<CardProps> = ({ children, className = '', hover = false, onClick }) => {
   const baseStyles = `
     bg-white rounded-xl shadow-apple
     transition-all duration-200
   `
 
-  const hoverStyles = hover ? `
+  const hoverStyles = hover
+    ? `
     hover:shadow-lg hover:-translate-y-1
     cursor-pointer
-  ` : ''
+  `
+    : ''
 
   const interactiveStyles = onClick ? 'cursor-pointer' : ''
 
@@ -32,7 +29,9 @@ const Card: React.FC<CardProps> = ({
         ${hoverStyles}
         ${interactiveStyles}
         ${className}
-      `.replace(/\s+/g, ' ').trim()}
+      `
+        .replace(/\s+/g, ' ')
+        .trim()}
       onClick={onClick}
     >
       {children}
@@ -46,11 +45,7 @@ export interface CardHeaderProps {
 }
 
 export const CardHeader: React.FC<CardHeaderProps> = ({ children, className = '' }) => {
-  return (
-    <div className={`px-6 py-4 border-b border-gray-100 ${className}`}>
-      {children}
-    </div>
-  )
+  return <div className={`px-6 py-4 border-b border-gray-100 ${className}`}>{children}</div>
 }
 
 export interface CardBodyProps {
@@ -59,11 +54,7 @@ export interface CardBodyProps {
 }
 
 export const CardBody: React.FC<CardBodyProps> = ({ children, className = '' }) => {
-  return (
-    <div className={`px-6 py-4 ${className}`}>
-      {children}
-    </div>
-  )
+  return <div className={`px-6 py-4 ${className}`}>{children}</div>
 }
 
 export interface CardFooterProps {
