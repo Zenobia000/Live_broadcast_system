@@ -1,5 +1,5 @@
 """API v1 endpoints."""
 
-from . import auth
+from . import attendance, auth, events
 
-__all__ = ["auth"]
+__all__ = ["attendance", "auth", "events"]
