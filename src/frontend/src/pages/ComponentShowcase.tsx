@@ -8,7 +8,7 @@ import {
   Input,
   Badge,
   StatusBadge,
-} from '@components'
+} from '../components'
 
 const ComponentShowcase: React.FC = () => {
   const [loading, setLoading] = useState(false)
@@ -142,7 +142,7 @@ const ComponentShowcase: React.FC = () => {
                 placeholder="example@email.com"
                 error="請輸入有效的電子郵件地址"
                 value={inputValue}
-                onChange={(e) => setInputValue(e.target.value)}
+                onChange={(e: React.ChangeEvent<HTMLInputElement>) => setInputValue(e.target.value)}
               />
 
               <Input label="禁用狀態" placeholder="無法輸入" disabled value="Disabled Input" />
