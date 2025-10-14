@@ -1,0 +1,153 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database - Security Hardened
+  db:
+    image: postgres:16-alpine
+    container_name: attendance_db
+    user: "999:999"  # Non-root user
+    security_opt:
+      - no-new-privileges:true
+      - label:disable
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpus: '0.5'
+    environment:
+      POSTGRES_USER_FILE: /run/secrets/db_user
+      POSTGRES_PASSWORD_FILE: /run/secrets/db_password
+      POSTGRES_DB_FILE: /run/secrets/db_name
+      POSTGRES_INITDB_ARGS: "--auth-host=md5"
+    # Remove port exposure - internal network only
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./postgresql.conf:/etc/postgresql/postgresql.conf:ro
+    secrets:
+      - db_user
+      - db_password
+      - db_name
+    networks:
+      - backend
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$(cat /run/secrets/db_user) -d $$(cat /run/secrets/db_name)"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+  # Redis Cache - Security Hardened
+  redis:
+    image: redis:7-alpine
+    container_name: attendance_redis
+    user: "999:999"  # Non-root user
+    security_opt:
+      - no-new-privileges:true
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+          cpus: '0.25'
+    # Remove port exposure - internal network only
+    volumes:
+      - redis_data:/data
+      - ./redis.conf:/usr/local/etc/redis/redis.conf:ro
+    networks:
+      - backend
+    command: redis-server /usr/local/etc/redis/redis.conf
+    healthcheck:
+      test: ["CMD", "redis-cli", "--raw", "incr", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Backend API - Security Hardened
+  backend:
+    build:
+      context: ../../src/backend
+      dockerfile: ../../infrastructure/docker/Dockerfile.backend
+    container_name: attendance_backend
+    user: "1000:1000"  # Non-root user
+    security_opt:
+      - no-new-privileges:true
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+          cpus: '1.0'
+    env_file:
+      - ../../src/backend/.env.production
+    ports:
+      - "8000:8000"
+    volumes:
+      - ../../src/backend:/app:ro  # Read-only for security
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - backend
+      - frontend
+    secrets:
+      - jwt_secret
+      - google_client_secret
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/api/v1/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+  # Frontend - Security Hardened
+  frontend:
+    build:
+      context: ../../src/frontend
+      dockerfile: ../../infrastructure/docker/Dockerfile.frontend
+    container_name: attendance_frontend
+    user: "1000:1000"  # Non-root user
+    security_opt:
+      - no-new-privileges:true
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpus: '0.5'
+    ports:
+      - "3000:3000"
+    volumes:
+      - ../../src/frontend:/app:ro  # Read-only for security
+    networks:
+      - frontend
+    environment:
+      - NODE_ENV=production
+      - VITE_API_URL=https://api.yourdomain.com
+    depends_on:
+      - backend
+
+# Security-focused network isolation
+networks:
+  backend:
+    driver: bridge
+    internal: true  # No external access
+  frontend:
+    driver: bridge
+
+# Secure secrets management
+secrets:
+  db_user:
+    file: ./secrets/db_user.txt
+  db_password:
+    file: ./secrets/db_password.txt
+  db_name:
+    file: ./secrets/db_name.txt
+  jwt_secret:
+    file: ./secrets/jwt_secret.txt
+  google_client_secret:
+    file: ./secrets/google_client_secret.txt
+
+volumes:
+  postgres_data:
+    driver: local
+  redis_data:
+    driver: local
