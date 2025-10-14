@@ -9,7 +9,7 @@ Design Philosophy:
 
 from typing import TYPE_CHECKING, List, Optional
 
-from sqlalchemy import String
+from sqlalchemy import Integer, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models.base import Base, TimestampMixin, UUIDMixin

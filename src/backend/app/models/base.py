@@ -16,7 +16,7 @@ from datetime import datetime
 from typing import Optional
 from uuid import UUID, uuid4
 
-from sqlalchemy import Column, DateTime, String, TypeDecorator, func
+from sqlalchemy import Column, DateTime, Integer, String, TypeDecorator, func
 from sqlalchemy.dialects.postgresql import UUID as PG_UUID
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
@@ -27,8 +27,9 @@ class GUID(TypeDecorator):
     """Platform-independent GUID type.
 
     Uses PostgreSQL's UUID type when available, otherwise VARCHAR(36).
+    This ensures compatibility with both SQLite (development) and PostgreSQL (production).
     """
-    impl = String
+    impl = String(36)
     cache_ok = True
 
     def load_dialect_impl(self, dialect):
@@ -40,18 +41,20 @@ class GUID(TypeDecorator):
     def process_bind_param(self, value, dialect):
         if value is None:
             return value
-        elif dialect.name == 'postgresql':
-            return str(value) if isinstance(value, UUID) else value
+        elif isinstance(value, UUID):
+            return str(value)
+        elif isinstance(value, str):
+            return value
         else:
-            return str(value) if isinstance(value, UUID) else value
+            return str(value)
 
     def process_result_value(self, value, dialect):
         if value is None:
             return value
+        elif dialect.name == 'postgresql':
+            return value if isinstance(value, UUID) else UUID(str(value))
         else:
-            if not isinstance(value, UUID):
-                return UUID(value)
-            return value
+            return UUID(str(value)) if not isinstance(value, UUID) else value
 
 
 class Base(DeclarativeBase):
@@ -61,16 +64,17 @@ class Base(DeclarativeBase):
 
 
 class UUIDMixin:
-    """Mixin for UUID primary key.
+    """Mixin for integer primary key.
 
-    Uses database-appropriate UUID generation.
+    Simple integer IDs for SQLite compatibility.
+    Can be upgraded to UUIDs later for production PostgreSQL.
     """
 
-    id: Mapped[UUID] = mapped_column(
-        GUID(),
+    id: Mapped[int] = mapped_column(
+        Integer,
         primary_key=True,
-        default=uuid4,
-        comment="Primary key (UUID)"
+        autoincrement=True,
+        comment="Primary key (auto-increment integer)"
     )
 
 
