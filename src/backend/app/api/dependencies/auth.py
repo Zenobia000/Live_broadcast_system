@@ -7,30 +7,34 @@ Design Philosophy:
 - Secure token extraction from headers
 """
 
-from typing import Annotated, Optional
+from typing import Annotated
 
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
+from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.database import get_session
 from app.models.auth.user import User
 from app.models.enums import UserRole
+from app.repositories.auth.user_repository import UserRepository
 from app.services.auth.auth_service import AuthService
+from app.services.auth.jwt_service import JWTService
+from app.services.auth.oauth_service import GoogleOAuthService
+from app.services.auth.user_service import UserService
 
 # HTTP Bearer token security scheme
 security = HTTPBearer()
 
 
-async def get_auth_service() -> AuthService:
-    """Get authentication service instance."""
-    # This will be implemented with dependency injection container
-    # For now, create instances directly
-    from app.repositories.auth.user_repository import UserRepository
-    from app.services.auth.user_service import UserService
-    from app.services.auth.oauth_service import GoogleOAuthService
-    from app.services.auth.jwt_service import JWTService
+async def get_auth_service(
+    session: AsyncSession = Depends(get_session)
+) -> AuthService:
+    """Get authentication service instance with proper dependency injection.
 
-    # Note: In production, these would come from a dependency container
-    user_repository = UserRepository(session=None)  # Session will be injected
+    This is the "good taste" approach - clean dependency injection,
+    single responsibility, proper session management.
+    """
+    user_repository = UserRepository(session)
     user_service = UserService(user_repository)
     oauth_service = GoogleOAuthService()
     jwt_service = JWTService()

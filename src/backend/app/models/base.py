@@ -16,9 +16,42 @@ from datetime import datetime
 from typing import Optional
 from uuid import UUID, uuid4
 
-from sqlalchemy import Column, DateTime, func
+from sqlalchemy import Column, DateTime, String, TypeDecorator, func
 from sqlalchemy.dialects.postgresql import UUID as PG_UUID
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
+
+from app.core.config import settings
+
+
+class GUID(TypeDecorator):
+    """Platform-independent GUID type.
+
+    Uses PostgreSQL's UUID type when available, otherwise VARCHAR(36).
+    """
+    impl = String
+    cache_ok = True
+
+    def load_dialect_impl(self, dialect):
+        if dialect.name == 'postgresql':
+            return dialect.type_descriptor(PG_UUID(as_uuid=True))
+        else:
+            return dialect.type_descriptor(String(36))
+
+    def process_bind_param(self, value, dialect):
+        if value is None:
+            return value
+        elif dialect.name == 'postgresql':
+            return str(value) if isinstance(value, UUID) else value
+        else:
+            return str(value) if isinstance(value, UUID) else value
+
+    def process_result_value(self, value, dialect):
+        if value is None:
+            return value
+        else:
+            if not isinstance(value, UUID):
+                return UUID(value)
+            return value
 
 
 class Base(DeclarativeBase):
@@ -30,13 +63,13 @@ class Base(DeclarativeBase):
 class UUIDMixin:
     """Mixin for UUID primary key.
 
-    Uses PostgreSQL's uuid_generate_v4() for server-side generation.
+    Uses database-appropriate UUID generation.
     """
 
     id: Mapped[UUID] = mapped_column(
-        PG_UUID(as_uuid=True),
+        GUID(),
         primary_key=True,
-        server_default=func.uuid_generate_v4(),
+        default=uuid4,
         comment="Primary key (UUID)"
     )
 

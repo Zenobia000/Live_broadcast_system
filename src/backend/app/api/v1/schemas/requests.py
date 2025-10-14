@@ -8,7 +8,7 @@ Design Philosophy:
 """
 
 from datetime import datetime
-from typing import Optional
+from typing import List, Optional
 from uuid import UUID
 
 from pydantic import BaseModel, Field
@@ -96,7 +96,7 @@ class MakeupRequestResponse(MakeupRequestBase):
 class ReviewRequest(BaseModel):
     """Schema for reviewing requests."""
 
-    action: str = Field(..., regex="^(approve|reject)$", description="Review action: approve or reject")
+    action: str = Field(..., pattern="^(approve|reject)$", description="Review action: approve or reject")
     note: Optional[str] = Field(None, max_length=1000, description="Review note (required for rejection)")
 
 

@@ -13,6 +13,7 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, status
 
+from app.api.dependencies.attendance import AttendanceServiceDep
 from app.api.dependencies.auth import AdminUser, CurrentUser
 from app.api.v1.schemas.attendance import (
     AttendanceResponse,
@@ -25,8 +26,31 @@ from app.api.v1.schemas.attendance import (
 router = APIRouter()
 
 
+@router.get("/today")
+async def get_today_status(current_user: CurrentUser):
+    """Get today's attendance status for current user.
+
+    Returns:
+        Simple status overview for today
+    """
+    from datetime import date
+
+    today = date.today()
+
+    return {
+        "date": today.isoformat(),
+        "user_id": str(current_user.id),
+        "user_name": current_user.name,
+        "status": "active",
+        "message": f"Today's status for {current_user.name}"
+    }
+
+
 @router.post("/auto-checkin", response_model=AutoCheckInResponse)
-async def auto_check_in(current_user: CurrentUser):
+async def auto_check_in(
+    current_user: CurrentUser,
+    attendance_service: AttendanceServiceDep
+):
     """Automatically check in user for ongoing events.
 
     This is the core event-driven functionality:
@@ -37,19 +61,38 @@ async def auto_check_in(current_user: CurrentUser):
     Returns:
         List of events user was checked in for
     """
-    # TODO: Implement with proper dependency injection
-    # For now, return mock response
-    return AutoCheckInResponse(
-        checked_in_events=[],
-        total_checked_in=0,
-        message="Auto check-in functionality will be available after dependency injection setup"
-    )
+    try:
+        attendances = await attendance_service.auto_check_in_user(current_user.id)
+
+        checked_in_events = [
+            {
+                "event_id": str(attendance.event_id),
+                "attendance_id": str(attendance.id),
+                "status": attendance.status.value,
+                "check_in_time": attendance.check_in_time,
+                "was_late": attendance.status.value == "LATE"
+            }
+            for attendance in attendances
+        ]
+
+        return AutoCheckInResponse(
+            checked_in_events=checked_in_events,
+            total_checked_in=len(attendances),
+            message=f"Successfully checked in for {len(attendances)} events"
+        )
+
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Auto check-in failed: {str(e)}"
+        )
 
 
 @router.post("/checkin", response_model=CheckInResponse)
 async def manual_check_in(
     checkin_request: CheckInRequest,
-    current_user: CurrentUser
+    current_user: CurrentUser,
+    attendance_service: AttendanceServiceDep
 ):
     """Manual check-in for specific event.
 
@@ -60,26 +103,46 @@ async def manual_check_in(
     Returns:
         Check-in result with attendance record
     """
-    # TODO: Implement with proper dependency injection
-    return CheckInResponse(
-        attendance=AttendanceResponse(
-            id=UUID("00000000-0000-0000-0000-000000000000"),
+    try:
+        attendance = await attendance_service.manual_check_in(
             user_id=current_user.id,
             event_id=checkin_request.event_id,
-            status="PRESENT",
-            check_in_time=checkin_request.check_in_time or datetime.utcnow(),
-            note=None,
-            created_at=datetime.utcnow(),
-            updated_at=datetime.utcnow()
-        ),
-        was_late=False,
-        message="Manual check-in functionality will be available after dependency injection setup"
-    )
+            check_in_time=checkin_request.check_in_time
+        )
+
+        was_late = attendance.status.value == "LATE"
+
+        return CheckInResponse(
+            attendance=AttendanceResponse(
+                id=attendance.id,
+                user_id=attendance.user_id,
+                event_id=attendance.event_id,
+                status=attendance.status.value,
+                check_in_time=attendance.check_in_time,
+                note=attendance.note,
+                created_at=attendance.created_at,
+                updated_at=attendance.updated_at
+            ),
+            was_late=was_late,
+            message="Successfully checked in" + (" (late)" if was_late else "")
+        )
+
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e)
+        )
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Check-in failed: {str(e)}"
+        )
 
 
 @router.get("/my-attendance", response_model=List[AttendanceWithDetails])
 async def get_my_attendance(
     current_user: CurrentUser,
+    attendance_service: AttendanceServiceDep,
     start_date: Optional[datetime] = None,
     end_date: Optional[datetime] = None
 ):
@@ -93,8 +156,37 @@ async def get_my_attendance(
     Returns:
         List of attendance records with event details
     """
-    # TODO: Implement with proper dependency injection
-    return []
+    try:
+        attendances = await attendance_service.get_user_attendance(
+            user_id=current_user.id,
+            start_date=start_date,
+            end_date=end_date
+        )
+
+        # For now, return attendance without event details since we'd need to join
+        # In a full implementation, we'd modify the service to include event data
+        return [
+            AttendanceWithDetails(
+                id=attendance.id,
+                user_id=attendance.user_id,
+                event_id=attendance.event_id,
+                status=attendance.status.value,
+                check_in_time=attendance.check_in_time,
+                note=attendance.note,
+                created_at=attendance.created_at,
+                updated_at=attendance.updated_at,
+                event_title="Event details to be implemented",  # TODO: Join with event
+                event_start_time=None,  # TODO: Join with event
+                event_end_time=None     # TODO: Join with event
+            )
+            for attendance in attendances
+        ]
+
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to retrieve attendance: {str(e)}"
+        )
 
 
 @router.get("/events/{event_id}/attendance", response_model=List[AttendanceWithDetails])

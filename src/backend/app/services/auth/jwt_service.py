@@ -22,7 +22,6 @@ class JWTService:
 
     ALGORITHM = "HS256"
 
-    @classmethod
     def create_access_token(
         self,
         user_id: UUID,
@@ -63,8 +62,7 @@ class JWTService:
             algorithm=self.ALGORITHM
         )
 
-    @classmethod
-    def verify_token(cls, token: str) -> Optional[Dict]:
+    def verify_token(self, token: str) -> Optional[Dict]:
         """Verify and decode JWT token.
 
         Args:
@@ -77,7 +75,7 @@ class JWTService:
             payload = jwt.decode(
                 token,
                 settings.SECRET_KEY,
-                algorithms=[cls.ALGORITHM]
+                algorithms=[self.ALGORITHM]
             )
 
             # Verify token type
@@ -94,8 +92,7 @@ class JWTService:
         except JWTError:
             return None
 
-    @classmethod
-    def get_user_id_from_token(cls, token: str) -> Optional[UUID]:
+    def get_user_id_from_token(self, token: str) -> Optional[UUID]:
         """Extract user ID from JWT token.
 
         Args:
@@ -104,7 +101,7 @@ class JWTService:
         Returns:
             User UUID or None if invalid
         """
-        payload = cls.verify_token(token)
+        payload = self.verify_token(token)
         if not payload:
             return None
 
@@ -113,8 +110,7 @@ class JWTService:
         except (ValueError, TypeError):
             return None
 
-    @classmethod
-    def get_user_role_from_token(cls, token: str) -> Optional[UserRole]:
+    def get_user_role_from_token(self, token: str) -> Optional[UserRole]:
         """Extract user role from JWT token.
 
         Args:
@@ -123,7 +119,7 @@ class JWTService:
         Returns:
             User role or None if invalid
         """
-        payload = cls.verify_token(token)
+        payload = self.verify_token(token)
         if not payload:
             return None
 
