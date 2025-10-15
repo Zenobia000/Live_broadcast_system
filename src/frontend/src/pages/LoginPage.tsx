@@ -1,123 +1,24 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState } from 'react'
 import { Button, LoadingSpinner, showToast } from '../components'
 import { api } from '../services/api'
 
-declare global {
-  interface Window {
-    google?: {
-      accounts: {
-        oauth2: {
-          initTokenClient: (config: any) => any
-        }
-      }
-    }
-  }
-}
-
 const LoginPage: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false)
-  const [isGoogleLoaded, setIsGoogleLoaded] = useState(false)
-
-  useEffect(() => {
-    // Load Google OAuth script
-    loadGoogleScript()
-  }, [])
-
-  const loadGoogleScript = () => {
-    // Check if script is already loaded
-    if (window.google) {
-      setIsGoogleLoaded(true)
-      return
-    }
-
-    const script = document.createElement('script')
-    script.src = 'https://accounts.google.com/gsi/client'
-    script.onload = () => {
-      setIsGoogleLoaded(true)
-    }
-    script.onerror = () => {
-      showToast({
-        type: 'error',
-        message: 'Google 登入服務載入失敗',
-        autoClose: 5000
-      })
-    }
-    document.head.appendChild(script)
-  }
 
   const handleGoogleLogin = async () => {
-    if (!window.google || !isGoogleLoaded) {
-      showToast({
-        type: 'warning',
-        message: 'Google 登入服務尚未載入，請稍候',
-        autoClose: 3000
-      })
-      return
-    }
-
     setIsLoading(true)
 
     try {
-      const client = window.google.accounts.oauth2.initTokenClient({
-        client_id: import.meta.env.VITE_GOOGLE_CLIENT_ID,
-        scope: 'openid email profile',
-        callback: async (response: any) => {
-          try {
-            if (response.access_token) {
-              // Call backend API with the access token
-              const apiResponse = await api.googleAuth(response.access_token)
+      // Get authorization URL from backend
+      const { authorization_url } = await api.getGoogleAuthUrl()
 
-              if (apiResponse.success) {
-                const { token, user } = apiResponse.data
-
-                // Store auth data
-                localStorage.setItem('authToken', token)
-                localStorage.setItem('userRole', user.role)
-                localStorage.setItem('userProfile', JSON.stringify(user))
-
-                // Show success message
-                showToast({
-                  type: 'success',
-                  message: `歡迎，${user.name}！`,
-                  autoClose: 2000
-                })
-
-                // Redirect to dashboard
-                setTimeout(() => {
-                  window.location.href = '/dashboard'
-                }, 1000)
-              }
-            } else {
-              throw new Error('No access token received')
-            }
-          } catch (error: any) {
-            console.error('Authentication error:', error)
-            showToast({
-              type: 'error',
-              message: error.response?.data?.message || '登入失敗，請重試',
-              autoClose: 5000
-            })
-          } finally {
-            setIsLoading(false)
-          }
-        },
-        error_callback: (error: any) => {
-          console.error('Google OAuth error:', error)
-          showToast({
-            type: 'error',
-            message: 'Google 登入已取消或發生錯誤',
-            autoClose: 3000
-          })
-          setIsLoading(false)
-        }
-      })
-
-      client.requestAccessToken()
-    } catch (error) {
-      console.error('Failed to initialize Google OAuth:', error)
+      // Redirect to Google's authorization page
+      window.location.href = authorization_url
+    } catch (error: any) {
+      console.error('Failed to get Google auth URL:', error)
       showToast({
         type: 'error',
-        message: 'Google 登入初始化失敗',
+        message: 'Google 登入初始化失敗，請重試',
         autoClose: 5000
       })
       setIsLoading(false)
@@ -162,13 +63,13 @@ const LoginPage: React.FC = () => {
           {/* Google OAuth Button */}
           <Button
             onClick={handleGoogleLogin}
-            disabled={isLoading || !isGoogleLoaded}
+            disabled={isLoading}
             className="w-full py-4 text-lg font-medium bg-white border-2 border-gray-300 text-gray-700 hover:bg-gray-50 hover:border-gray-400 dark:bg-gray-700 dark:border-gray-600 dark:text-white dark:hover:bg-gray-600"
           >
             {isLoading ? (
               <div className="flex items-center justify-center gap-3">
                 <LoadingSpinner size="sm" />
-                <span>登入中...</span>
+                <span>正在跳轉至 Google 登入...</span>
               </div>
             ) : (
               <div className="flex items-center justify-center gap-3">
@@ -188,14 +89,6 @@ const LoginPage: React.FC = () => {
           <p className="text-xs text-gray-500 dark:text-gray-400 text-center mt-4 leading-relaxed">
             我們重視您的隱私，僅讀取基本資料用於身份驗證
           </p>
-
-          {/* Loading indicator for Google script */}
-          {!isGoogleLoaded && (
-            <div className="flex items-center justify-center gap-2 mt-4 text-sm text-gray-500">
-              <LoadingSpinner size="sm" />
-              <span>正在載入 Google 登入服務...</span>
-            </div>
-          )}
         </div>
 
         {/* Feature Highlights */}

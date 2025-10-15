@@ -3,12 +3,11 @@ User Pydantic schemas for API input/output validation.
 
 Design Philosophy:
 - Separate schemas for request/response to avoid data leakage
-- UUID as string for JSON serialization
+- Integer ID for JSON serialization
 - Clear validation rules
 """
 
 from typing import Optional
-from uuid import UUID
 
 from pydantic import BaseModel, EmailStr, Field
 
@@ -40,7 +39,7 @@ class UserUpdate(BaseModel):
 class UserResponse(UserBase):
     """Schema for user API responses."""
 
-    id: UUID = Field(..., description="User ID")
+    id: int = Field(..., description="User ID")
     google_id: str = Field(..., description="Google OAuth user ID")
     avatar_url: Optional[str] = Field(None, description="User avatar URL")
     role: UserRole = Field(..., description="User role")
@@ -54,7 +53,7 @@ class UserResponse(UserBase):
 class UserProfile(BaseModel):
     """Simplified user profile schema."""
 
-    id: UUID = Field(..., description="User ID")
+    id: int = Field(..., description="User ID")
     name: str = Field(..., description="User display name")
     email: EmailStr = Field(..., description="User email address")
     avatar_url: Optional[str] = Field(None, description="User avatar URL")

@@ -8,7 +8,6 @@ Design Philosophy (Linus Torvalds - "Good Taste"):
 """
 
 from typing import Optional
-from uuid import UUID
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -40,11 +39,11 @@ class UserRepository:
             role=role
         )
         self.session.add(user)
-        await self.session.commit()
-        await self.session.refresh(user)
+        await self.session.flush()  # Flush to get the ID without committing
+        await self.session.refresh(user)  # Refresh to get generated fields
         return user
 
-    async def get_by_id(self, user_id: UUID) -> Optional[User]:
+    async def get_by_id(self, user_id: int) -> Optional[User]:
         """Get user by ID."""
         result = await self.session.execute(
             select(User).where(User.id == user_id)
@@ -67,7 +66,7 @@ class UserRepository:
 
     async def update(self, user: User) -> User:
         """Update user information."""
-        await self.session.commit()
+        await self.session.flush()  # Flush changes without committing
         await self.session.refresh(user)
         return user
 

@@ -7,6 +7,8 @@ Design Philosophy:
 - Secure token handling
 """
 
+import logging
+import secrets
 from typing import Dict, Optional
 
 import httpx
@@ -14,6 +16,8 @@ from authlib.integrations.starlette_client import OAuth
 from starlette.applications import Starlette
 
 from app.core.config import settings
+
+logger = logging.getLogger(__name__)
 
 
 class GoogleOAuthService:
@@ -32,7 +36,7 @@ class GoogleOAuthService:
             }
         )
 
-    def get_authorization_url(self, request) -> tuple[str, str]:
+    async def get_authorization_url(self, request) -> tuple[str, str]:
         """Generate OAuth authorization URL.
 
         Args:
@@ -41,10 +45,25 @@ class GoogleOAuthService:
         Returns:
             Tuple of (authorization_url, state)
         """
+        # Generate state manually
+        state = secrets.token_urlsafe(32)
+
+        # Save state in session
+        request.session['oauth_state'] = state
+
         redirect_uri = settings.GOOGLE_REDIRECT_URI
-        return self.oauth.google.create_authorization_url(
-            request, redirect_uri
+        result = await self.oauth.google.create_authorization_url(
+            redirect_uri,
+            state=state  # Pass our state explicitly
         )
+
+        # Debug logging
+        logger.info(f"[OAuth] Generated authorization URL")
+        logger.info(f"[OAuth] State generated: {state}")
+        logger.info(f"[OAuth] State saved in session: {request.session.get('oauth_state')}")
+        logger.info(f"[OAuth] Session keys: {list(request.session.keys())}")
+
+        return result['url'], state
 
     async def exchange_code_for_token(self, request, code: str, state: str) -> Dict:
         """Exchange authorization code for access token.
@@ -62,20 +81,54 @@ class GoogleOAuthService:
         """
         redirect_uri = settings.GOOGLE_REDIRECT_URI
 
-        try:
-            # Exchange code for token
-            token = await self.oauth.google.authorize_access_token(
-                request, redirect_uri=redirect_uri
-            )
+        # Debug logging
+        logger.info(f"[OAuth] Callback received")
+        logger.info(f"[OAuth] State from URL: {state}")
+        logger.info(f"[OAuth] Session keys: {list(request.session.keys())}")
+        logger.info(f"[OAuth] State from session: {request.session.get('oauth_state', 'NO_STATE')}")
 
-            # Parse the ID token to get user info
-            user_info = token.get('userinfo')
-            if not user_info:
-                # Fallback: fetch user info from Google API
-                user_info = await self._fetch_user_info(token['access_token'])
+        # Verify state manually
+        session_state = request.session.get('oauth_state')
+        if not session_state or session_state != state:
+            logger.error(f"[OAuth] State mismatch! Session: {session_state}, URL: {state}")
+            raise Exception(f"mismatching_state: CSRF Warning! State not equal in request and response.")
+
+        # Clear state from session
+        request.session.pop('oauth_state', None)
+
+        logger.info(f"[OAuth] State verified successfully")
+
+        try:
+            # Exchange code for token using Google's token endpoint directly
+            logger.info(f"[OAuth] Exchanging code for token...")
+
+            async with httpx.AsyncClient() as client:
+                token_response = await client.post(
+                    'https://oauth2.googleapis.com/token',
+                    data={
+                        'code': code,
+                        'client_id': settings.GOOGLE_CLIENT_ID,
+                        'client_secret': settings.GOOGLE_CLIENT_SECRET,
+                        'redirect_uri': redirect_uri,
+                        'grant_type': 'authorization_code',
+                    }
+                )
+                token_response.raise_for_status()
+                token = token_response.json()
+
+            logger.info(f"[OAuth] Token exchange successful")
+
+            # Fetch user info from Google API
+            logger.info(f"[OAuth] Fetching user info from Google API...")
+            user_info = await self._fetch_user_info(token['access_token'])
+            logger.info(f"[OAuth] User info retrieved: {user_info.get('email')}")
+            logger.info(f"[OAuth] User info keys: {list(user_info.keys())}")
+
+            # Google OAuth2 v2 uses 'id' instead of 'sub'
+            google_id = user_info.get('sub') or user_info.get('id')
 
             return {
-                'google_id': user_info['sub'],
+                'google_id': google_id,
                 'email': user_info['email'],
                 'name': user_info['name'],
                 'avatar_url': user_info.get('picture'),
@@ -84,6 +137,7 @@ class GoogleOAuthService:
             }
 
         except Exception as e:
+            logger.error(f"[OAuth] Token exchange failed: {str(e)}", exc_info=True)
             raise Exception(f"OAuth token exchange failed: {str(e)}")
 
     async def _fetch_user_info(self, access_token: str) -> Dict:

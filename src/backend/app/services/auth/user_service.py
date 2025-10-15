@@ -8,7 +8,6 @@ Design Philosophy:
 """
 
 from typing import Optional
-from uuid import UUID
 
 from app.models.auth.user import User
 from app.models.enums import UserRole
@@ -59,7 +58,7 @@ class UserService:
             role=role
         )
 
-    async def get_user_by_id(self, user_id: UUID) -> Optional[User]:
+    async def get_user_by_id(self, user_id: int) -> Optional[User]:
         """Get user by ID."""
         return await self.user_repository.get_by_id(user_id)
 

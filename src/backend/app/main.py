@@ -6,6 +6,7 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from starlette.middleware.sessions import SessionMiddleware
 
 from app.api.v1.api import api_router
 from app.core.config import settings
@@ -21,15 +22,14 @@ async def lifespan(app: FastAPI):
     """Application lifespan manager for startup and shutdown."""
     # Startup
     logger.info("Starting up Smart Attendance System API")
-    # TODO: Enable database initialization after fixing UUID issues
-    # await init_db()
-    logger.info("Database initialization skipped for MVP")
+    await init_db()
+    logger.info("Database initialized successfully")
 
     yield
 
     # Shutdown
     logger.info("Shutting down Smart Attendance System API")
-    # await close_db()
+    await close_db()
     logger.info("Application shutdown complete")
 
 
@@ -43,6 +43,18 @@ app = FastAPI(
 )
 
 # Middleware Configuration
+# Session middleware for OAuth flow
+app.add_middleware(
+    SessionMiddleware,
+    secret_key=settings.SECRET_KEY,
+    session_cookie="session",
+    max_age=3600,  # 1 hour
+    same_site="lax",
+    https_only=False,  # Set to True in production with HTTPS
+    path="/",
+)
+
+# CORS middleware
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.ALLOWED_ORIGINS,

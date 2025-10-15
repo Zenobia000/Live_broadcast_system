@@ -7,6 +7,7 @@ Design Philosophy:
 - Secure token handling
 """
 
+import logging
 from typing import Dict, Optional, Tuple
 
 from app.models.auth.user import User
@@ -14,6 +15,8 @@ from app.models.enums import UserRole
 from app.services.auth.jwt_service import JWTService
 from app.services.auth.oauth_service import GoogleOAuthService
 from app.services.auth.user_service import UserService
+
+logger = logging.getLogger(__name__)
 
 
 class AuthService:
@@ -29,7 +32,7 @@ class AuthService:
         self.oauth_service = oauth_service
         self.jwt_service = jwt_service
 
-    def get_oauth_authorization_url(self, request) -> Tuple[str, str]:
+    async def get_oauth_authorization_url(self, request) -> Tuple[str, str]:
         """Get Google OAuth authorization URL.
 
         Args:
@@ -38,7 +41,7 @@ class AuthService:
         Returns:
             Tuple of (authorization_url, state)
         """
-        return self.oauth_service.get_authorization_url(request)
+        return await self.oauth_service.get_authorization_url(request)
 
     async def authenticate_with_google(
         self, request, code: str, state: str
@@ -74,6 +77,7 @@ class AuthService:
 
         if not user:
             # Create new user
+            logger.info(f"[Auth] Creating new user for {oauth_data['email']}")
             user = await self.user_service.create_user(
                 email=oauth_data['email'],
                 google_id=oauth_data['google_id'],
@@ -81,8 +85,10 @@ class AuthService:
                 avatar_url=oauth_data.get('avatar_url'),
                 role=UserRole.MEMBER
             )
+            logger.info(f"[Auth] User created successfully: {user.id}")
         else:
             # Update user profile with latest Google data
+            logger.info(f"[Auth] Updating existing user: {user.id}")
             user = await self.user_service.update_user_profile(
                 user=user,
                 name=oauth_data['name'],
@@ -90,11 +96,16 @@ class AuthService:
             )
 
         # Generate JWT access token
+        logger.info(f"[Auth] Generating JWT token for user: {user.id}")
+        logger.info(f"[Auth] User details - ID: {user.id}, Email: {user.email}, Role: {user.role}")
+
         access_token = self.jwt_service.create_access_token(
             user_id=user.id,
             email=user.email,
             role=user.role
         )
+
+        logger.info(f"[Auth] JWT token generated successfully")
 
         return user, access_token
 

@@ -10,10 +10,8 @@ Design Philosophy (Linus: "Good Taste"):
 
 from datetime import datetime
 from typing import TYPE_CHECKING, Optional
-from uuid import UUID
 
-from sqlalchemy import ForeignKey, Index, String, Text, text
-from sqlalchemy.dialects.postgresql import UUID as PG_UUID
+from sqlalchemy import ForeignKey, Index, Integer, String, Text, text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy import DateTime
 
@@ -64,17 +62,13 @@ class Attendance(Base, UUIDMixin, TimestampMixin, SoftDeleteMixin):
     )
 
     # Foreign Keys
-    user_id: Mapped[UUID] = mapped_column(
-        PG_UUID(as_uuid=True),
-        ForeignKey("users.id", ondelete="CASCADE"),
+    user_id: Mapped[int] = mapped_column(Integer, ForeignKey("users.id", ondelete="CASCADE"),
         nullable=False,
         index=True,
         comment="User who has this attendance record"
     )
 
-    event_id: Mapped[UUID] = mapped_column(
-        PG_UUID(as_uuid=True),
-        ForeignKey("events.id", ondelete="CASCADE"),
+    event_id: Mapped[int] = mapped_column(Integer, ForeignKey("events.id", ondelete="CASCADE"),
         nullable=False,
         index=True,
         comment="Event this attendance is for"

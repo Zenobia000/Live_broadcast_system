@@ -4,6 +4,7 @@ import { PageLoading } from '../components'
 
 // Lazy load pages for better performance
 const LoginPage = React.lazy(() => import('../pages/LoginPage'))
+const AuthCallbackPage = React.lazy(() => import('../pages/AuthCallbackPage'))
 const DashboardPage = React.lazy(() => import('../pages/DashboardPage'))
 const LeavePage = React.lazy(() => import('../pages/LeavePage'))
 const MakeupPage = React.lazy(() => import('../pages/MakeupPage'))
@@ -63,6 +64,14 @@ export const router = createBrowserRouter([
       <PublicRoute>
         <LoginPage />
       </PublicRoute>
+    ),
+  },
+  {
+    path: '/auth/callback',
+    element: (
+      <PageLayout>
+        <AuthCallbackPage />
+      </PageLayout>
     ),
   },
   {

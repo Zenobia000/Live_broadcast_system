@@ -28,7 +28,7 @@ async def google_login(
     Returns:
         Authorization URL for Google OAuth
     """
-    auth_url, state = auth_service.get_oauth_authorization_url(request)
+    auth_url, state = await auth_service.get_oauth_authorization_url(request)
 
     return {
         "authorization_url": auth_url,
@@ -42,7 +42,7 @@ async def google_callback(
     code: str,
     state: str,
     auth_service: AuthService
-) -> Dict[str, str]:
+):
     """Handle Google OAuth callback.
 
     Args:
@@ -52,24 +52,32 @@ async def google_callback(
         auth_service: Authentication service
 
     Returns:
-        Access token and user information
+        Redirect to frontend with token
     """
     try:
+        from starlette.responses import RedirectResponse
+        import logging
+
+        logger = logging.getLogger(__name__)
+
         user, access_token = await auth_service.authenticate_with_google(
             request, code, state
         )
 
-        return {
-            "access_token": access_token,
-            "token_type": "bearer",
-            "user": UserProfile.model_validate(user).model_dump()
-        }
+        # Redirect to frontend with token
+        frontend_url = "http://localhost:3000"
+        redirect_url = f"{frontend_url}/auth/callback?token={access_token}"
+
+        logger.info(f"[OAuth Callback] Redirecting to: {redirect_url[:80]}...")
+        logger.info(f"[OAuth Callback] Token length: {len(access_token)}")
+
+        return RedirectResponse(url=redirect_url)
 
     except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Authentication failed: {str(e)}"
-        )
+        # Redirect to frontend with error
+        frontend_url = "http://localhost:3000"
+        error_url = f"{frontend_url}/?error={str(e)}"
+        return RedirectResponse(url=error_url)
 
 
 @router.get("/me", response_model=CurrentUserSchema)
@@ -134,15 +142,14 @@ async def update_user_role(
         HTTPException: If user not found or invalid role
     """
     try:
-        from uuid import UUID
-        user_uuid = UUID(user_id)
+        user_int_id = int(user_id)
     except ValueError:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Invalid user ID format"
         )
 
-    user = await auth_service.user_service.get_user_by_id(user_uuid)
+    user = await auth_service.user_service.get_user_by_id(user_int_id)
     if not user:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,

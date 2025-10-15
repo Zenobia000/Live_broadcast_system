@@ -81,6 +81,7 @@ class ApiClient {
       headers: {
         'Content-Type': 'application/json',
       },
+      withCredentials: true,  // Enable cookies for OAuth session
     })
 
     this.setupInterceptors()
@@ -161,6 +162,11 @@ class ApiClient {
   }
 
   // Authentication APIs
+  async getGoogleAuthUrl(): Promise<{ authorization_url: string; state: string }> {
+    const response = await this.client.get('/auth/login/google')
+    return response.data
+  }
+
   async googleAuth(authCode: string): Promise<ApiResponse<{ token: string; user: User }>> {
     const response = await this.client.post('/auth/google', { code: authCode })
     return response.data
@@ -284,6 +290,7 @@ export const apiClient = new ApiClient()
 // Convenience functions
 export const api = {
   // Auth
+  getGoogleAuthUrl: () => apiClient.getGoogleAuthUrl(),
   googleAuth: (authCode: string) => apiClient.googleAuth(authCode),
   logout: () => apiClient.logout(),
 

@@ -2,10 +2,8 @@
 
 from datetime import datetime
 from typing import TYPE_CHECKING, Optional
-from uuid import UUID
 
-from sqlalchemy import CheckConstraint, ForeignKey, String, Text
-from sqlalchemy.dialects.postgresql import UUID as PG_UUID
+from sqlalchemy import CheckConstraint, ForeignKey, Integer, String, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy import DateTime
 
@@ -31,16 +29,12 @@ class LeaveRequest(Base, UUIDMixin, TimestampMixin, SoftDeleteMixin):
         {"comment": "Leave applications with approval workflow"}
     )
 
-    user_id: Mapped[UUID] = mapped_column(
-        PG_UUID(as_uuid=True),
-        ForeignKey("users.id", ondelete="CASCADE"),
+    user_id: Mapped[int] = mapped_column(Integer, ForeignKey("users.id", ondelete="CASCADE"),
         nullable=False,
         index=True
     )
 
-    event_id: Mapped[UUID] = mapped_column(
-        PG_UUID(as_uuid=True),
-        ForeignKey("events.id", ondelete="CASCADE"),
+    event_id: Mapped[int] = mapped_column(Integer, ForeignKey("events.id", ondelete="CASCADE"),
         nullable=False,
         index=True
     )
@@ -63,9 +57,7 @@ class LeaveRequest(Base, UUIDMixin, TimestampMixin, SoftDeleteMixin):
         index=True
     )
 
-    reviewed_by: Mapped[Optional[UUID]] = mapped_column(
-        PG_UUID(as_uuid=True),
-        ForeignKey("users.id", ondelete="SET NULL"),
+    reviewed_by: Mapped[Optional[int]] = mapped_column(Integer, ForeignKey("users.id", ondelete="SET NULL"),
         nullable=True
     )
 
@@ -91,14 +83,14 @@ class LeaveRequest(Base, UUIDMixin, TimestampMixin, SoftDeleteMixin):
         foreign_keys=[reviewed_by]
     )
 
-    def approve(self, reviewer_id: UUID, note: Optional[str] = None) -> None:
+    def approve(self, reviewer_id: int, note: Optional[str] = None) -> None:
         """Approve leave request."""
         self.status = RequestStatus.APPROVED
         self.reviewed_by = reviewer_id
         self.review_note = note
         self.reviewed_at = datetime.utcnow()
 
-    def reject(self, reviewer_id: UUID, note: str) -> None:
+    def reject(self, reviewer_id: int, note: str) -> None:
         """Reject leave request with reason."""
         self.status = RequestStatus.REJECTED
         self.reviewed_by = reviewer_id

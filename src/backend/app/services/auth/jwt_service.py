@@ -9,7 +9,6 @@ Design Philosophy:
 
 from datetime import datetime, timedelta
 from typing import Dict, Optional
-from uuid import UUID
 
 from jose import JWTError, jwt
 
@@ -24,7 +23,7 @@ class JWTService:
 
     def create_access_token(
         self,
-        user_id: UUID,
+        user_id: int,
         email: str,
         role: UserRole,
         expires_delta: Optional[timedelta] = None
@@ -32,9 +31,9 @@ class JWTService:
         """Create a new access token.
 
         Args:
-            user_id: User UUID
+            user_id: User ID (integer)
             email: User email
-            role: User role
+            role: User role (can be UserRole enum or string)
             expires_delta: Token expiration time delta
 
         Returns:
@@ -47,10 +46,13 @@ class JWTService:
                 minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES
             )
 
+        # Handle both UserRole enum and string
+        role_value = role.value if isinstance(role, UserRole) else role
+
         to_encode = {
-            "sub": str(user_id),  # Subject (user ID)
+            "sub": str(user_id),  # Subject (user ID as string)
             "email": email,
-            "role": role.value,
+            "role": role_value,
             "exp": expire,
             "iat": datetime.utcnow(),
             "type": "access"
@@ -92,21 +94,21 @@ class JWTService:
         except JWTError:
             return None
 
-    def get_user_id_from_token(self, token: str) -> Optional[UUID]:
+    def get_user_id_from_token(self, token: str) -> Optional[int]:
         """Extract user ID from JWT token.
 
         Args:
             token: JWT token string
 
         Returns:
-            User UUID or None if invalid
+            User ID (integer) or None if invalid
         """
         payload = self.verify_token(token)
         if not payload:
             return None
 
         try:
-            return UUID(payload.get("sub"))
+            return int(payload.get("sub"))
         except (ValueError, TypeError):
             return None
 
