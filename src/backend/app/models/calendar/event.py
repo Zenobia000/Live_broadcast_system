@@ -97,8 +97,8 @@ class Event(Base, UUIDMixin, TimestampMixin):
     )
 
     # Creator (nullable for system-synced events)
-    created_by: Mapped[Optional[UUID]] = mapped_column(
-        PG_UUID(as_uuid=True),
+    created_by: Mapped[Optional[int]] = mapped_column(
+        Integer,
         ForeignKey("users.id", ondelete="SET NULL"),
         nullable=True,
         comment="User who created this event (NULL for system-synced events)"
