@@ -2,7 +2,7 @@
 
 **基於事件驅動的自動化簽到與智能審核平台**
 
-> **專案狀態**: 50% 完成 (25h/50h) | **里程碑**: 可運行的 MVP 系統 ✅ | **下個目標**: 完整功能實作 🚀
+> **專案狀態**: 65% 完成 | **里程碑**: Google OAuth 認證完成 ✅ | **下個目標**: Google Calendar 整合 🚀
 
 ## 🎯 系統特色
 
@@ -16,17 +16,29 @@
 ## 🎉 **當前可用功能**
 
 ### ✅ 已實現 (MVP 階段)
-- **🏗️ 基礎設施**: 完整的開發環境建置 (Docker + 資料庫)
+- **🏗️ 基礎設施**: 完整的開發環境建置 (SQLite + Docker)
 - **📊 架構設計**: 高品質的系統架構文檔與設計
-- **🔧 FastAPI 後端**: 可運行的 MVP API 服務器 (localhost:8000)
-- **⚛️ React 前端**: 基本的 UI 框架與開發環境 (localhost:3000)
-- **🔐 安全基礎**: 環境變數管理與 Docker 安全配置
+- **🔧 FastAPI 後端**: 完整運行的 API 服務器 (localhost:8000)
+  - ✅ SQLAlchemy 資料模型 (Integer ID)
+  - ✅ Repository 模式資料存取層
+  - ✅ Service 層業務邏輯
+  - ✅ Clean Architecture 分層設計
+- **⚛️ React 前端**: Apple Human Interface 風格 UI (localhost:3000)
+  - ✅ Vite + TypeScript + Tailwind CSS
+  - ✅ React Router 路由管理
+  - ✅ Axios API 客戶端整合
+- **🔑 Google OAuth 2.0 認證**: 完整登入流程 **✅ 已完成並可運行！**
+  - ✅ OAuth 授權與回調處理
+  - ✅ JWT Token 生成與驗證
+  - ✅ Session 管理與 Cookie 處理
+  - ✅ 用戶資料創建與更新
+  - ✅ 前後端完整認證流程
+- **🔐 安全基礎**: 環境變數管理與安全配置
 - **🧪 測試框架**: Pytest + Vitest + Playwright 基礎設施
 
 ### 🔄 開發中
-- **🔑 Google OAuth 認證**: 架構已設計，實作進行中
-- **📱 前端頁面**: Steve Jobs 風格設計已完成，React 組件開發中
-- **📡 API 整合**: 前後端連接與資料流建立中
+- **📱 Dashboard 頁面**: 用戶儀表板與簽到功能
+- **📡 API 完善**: 簽到、請假、補簽等業務 API
 
 ### ⏳ 待開發
 - **📅 Google Calendar 整合**: 事件同步與自動簽到
@@ -44,31 +56,47 @@ git clone <repository-url>
 cd Live_broadcast_system
 ```
 
-### 2️⃣ 後端環境設置
+### 2️⃣ 配置 Google OAuth 憑證
+
+1. 前往 [Google Cloud Console](https://console.cloud.google.com/apis/credentials)
+2. 創建 OAuth 2.0 客戶端 ID
+3. 設置授權 JavaScript 來源：
+   - `http://localhost:3000`
+   - `http://localhost:8000`
+4. 設置授權重定向 URI：
+   - `http://localhost:8000/api/v1/auth/callback/google`
+5. 將憑證複製到 `src/backend/.env`：
+   ```bash
+   GOOGLE_CLIENT_ID=你的_CLIENT_ID
+   GOOGLE_CLIENT_SECRET=你的_CLIENT_SECRET
+   ```
+
+### 3️⃣ 安裝後端依賴 (Poetry)
 ```bash
 cd src/backend
-python -m venv venv
-source venv/bin/activate  # Windows: venv\Scripts\activate
-pip install -r requirements.txt
+# 安裝 Poetry (如果尚未安裝)
+curl -sSL https://install.python-poetry.org | python3 -
+
+# 安裝專案依賴
+poetry install
 ```
 
-### 3️⃣ 前端環境設置
+### 4️⃣ 安裝前端依賴
 ```bash
 cd src/frontend
 npm install
-npm run dev
-```
-
-### 4️⃣ 資料庫環境啟動
-```bash
-cd infrastructure/docker
-docker-compose up -d
 ```
 
 ### 5️⃣ 啟動後端服務
 ```bash
 cd src/backend
-uvicorn app.main:app --reload
+poetry run uvicorn app.main:app --reload --port 8000
+```
+
+### 6️⃣ 啟動前端服務 (新終端機)
+```bash
+cd src/frontend
+npm run dev
 ```
 
 現在您可以透過以下網址存取：
@@ -80,10 +108,11 @@ uvicorn app.main:app --reload
 
 ### 🔧 **後端技術棧**
 - **框架**: FastAPI + Uvicorn
-- **資料庫**: PostgreSQL + SQLAlchemy + Alembic
-- **快取**: Redis
-- **認證**: Google OAuth 2.0 + JWT
+- **資料庫**: SQLite (開發) / PostgreSQL (生產) + SQLAlchemy
+- **依賴管理**: Poetry
+- **認證**: Google OAuth 2.0 + JWT ✅
 - **API**: RESTful + OpenAPI/Swagger
+- **架構模式**: Clean Architecture + Repository Pattern
 
 ### 🌟 **前端技術棧**
 - **框架**: React 18 + TypeScript
@@ -100,37 +129,55 @@ uvicorn app.main:app --reload
 
 ## 📊 **專案進度狀態**
 
-### ✅ **已完成項目** (25% 完成)
-1. **專案初始化與架構設計** (100%)
+### ✅ **已完成項目** (65% 完成)
+
+#### 1. **專案初始化與架構設計** (100%)
    - ✅ 專案簡報與 PRD 文檔
    - ✅ 系統架構設計文檔
    - ✅ 資料庫 ER 圖與模型設計
-   - ✅ SQLAlchemy 模型定義
-   - ✅ Alembic 遷移腳本
+   - ✅ SQLAlchemy 模型定義 (Integer ID)
+   - ✅ Clean Architecture 實作
 
-2. **開發環境建置** (100%)
+#### 2. **開發環境建置** (100%)
    - ✅ FastAPI 後端專案結構
+   - ✅ Poetry 依賴管理
    - ✅ React + Vite 前端環境
    - ✅ Tailwind CSS 設計系統
-   - ✅ Docker 容器化配置
-   - ✅ PostgreSQL & Redis 環境
+   - ✅ SQLite 開發資料庫
+
+#### 3. **認證與授權系統** (100%) 🎉
+   - ✅ Google OAuth 2.0 完整整合
+   - ✅ JWT Token 生成與驗證
+   - ✅ Session 管理與 Cookie
+   - ✅ User 模型與 Repository
+   - ✅ 前端登入頁面與回調處理
+   - ✅ 受保護路由與認證中間件
+
+#### 4. **資料模型層** (100%)
+   - ✅ User 模型 (認證)
+   - ✅ Event 模型 (Google Calendar)
+   - ✅ Attendance 模型 (簽到記錄)
+   - ✅ LeaveRequest 模型 (請假)
+   - ✅ MakeupRequest 模型 (補簽)
+   - ✅ Repository Pattern 實作
 
 ### 🔄 **進行中項目**
-- 專案文檔持續更新
-- API 設計規範完善
+- Dashboard 頁面開發
+- 簽到核心業務邏輯
+- API 端點完善
 
 ### ⏳ **待開始項目**
-- 認證與授權模組 (Google OAuth 2.0)
-- 自動簽到核心功能
-- 前端頁面開發
 - Google Calendar API 整合
-- 測試框架建立
+- 自動簽到觸發機制
+- 請假補簽審核流程
+- Email/Slack 通知服務
+- 報表與統計功能
 
 ### 📅 **開發計劃**
-- **Week 1**: 認證模組開發 (當前重點)
-- **Week 2-3**: 自動簽到核心功能
-- **Week 4**: 請假補簽流程
-- **Week 5**: 前端頁面與整合
+- **Week 1**: 認證模組開發 ✅ **已完成！**
+- **Week 2-3**: 自動簽到核心功能 (當前重點)
+- **Week 4**: Google Calendar 整合
+- **Week 5**: 請假補簽流程
 - **Week 6**: 測試與優化
 - **Week 7**: 部署與上線
 
@@ -211,21 +258,21 @@ uvicorn app.main:app --reload
 
 根據 WBS 開發計劃，當前重點任務：
 
-### 🎯 **Week 1 優先任務**
-1. **認證模組開發**
-   - User 資料模型實作
-   - Google OAuth 2.0 整合
-   - JWT Token 機制實作
+### 🎯 **Week 2 優先任務**
+1. **Dashboard 開發**
+   - 用戶儀表板頁面
+   - 簽到狀態顯示
+   - 近期活動列表
 
-2. **前端認證頁面**
-   - 登入頁面設計
-   - Google OAuth 整合
-   - 使用者狀態管理
+2. **簽到核心功能**
+   - 簽到 API 端點
+   - 遲到判斷邏輯
+   - 簽到記錄儲存
 
-3. **API 端點開發**
-   - 登入/登出 API
-   - 使用者資訊 API
-   - 認證中間件
+3. **Event 管理**
+   - Event CRUD API
+   - 手動創建 Event (測試用)
+   - Event 與 Attendance 關聯
 
 ## 🤖 **智能協作支援**
 
@@ -252,6 +299,25 @@ uvicorn app.main:app --reload
 
 ---
 
-**目前進度**: 25% 完成 | **下個里程碑**: 認證模組開發 🚀
+## 🎉 **重要里程碑**
+
+### ✅ Google OAuth 認證完成！ (2025-10-16)
+- 完整的 OAuth 2.0 授權流程
+- JWT Token 認證系統
+- 前後端完整整合
+- 用戶創建與登入成功
+
+**目前進度**: 65% 完成 | **下個里程碑**: 自動簽到核心功能 🚀
 
 > 💡 **開發提醒**: 遵循 CLAUDE.md 中的 Linus Torvalds 開發心法，確保程式碼品質與可維護性
+
+## 📝 **最近更新日誌**
+
+### 2025-10-16
+- ✅ 修復 Google OAuth 2.0 完整登入流程
+- ✅ 實作 JWT Token 生成與驗證
+- ✅ 解決 Session Cookie 跨域問題
+- ✅ 修復 UUID → Integer ID 遷移
+- ✅ 完成 Pydantic Schema 類型修正
+- ✅ 前端 AuthCallback 頁面整合
+- ✅ 成功登入並跳轉到 Dashboard
