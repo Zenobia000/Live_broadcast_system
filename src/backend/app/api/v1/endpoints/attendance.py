@@ -391,13 +391,18 @@ async def quick_check_in(
         # Use timezone-aware datetime for proper comparison
         from datetime import timezone
         now = datetime.now(timezone.utc)
+        now_str = now.isoformat()  # Convert to ISO string for SQLite compatibility
+
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.info(f"[Quick Check-in] Looking for ongoing event at {now_str}")
 
         query = (
             select(Event)
             .where(
                 and_(
-                    Event.start_time <= now,
-                    Event.end_time >= now
+                    Event.start_time <= now_str,
+                    Event.end_time >= now_str
                 )
             )
             .order_by(Event.start_time.desc())
@@ -408,10 +413,13 @@ async def quick_check_in(
         current_event = result.scalar_one_or_none()
 
         if not current_event:
+            logger.warning(f"[Quick Check-in] No ongoing event found at {now_str}")
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="目前沒有進行中的事件可以簽到"
             )
+
+        logger.info(f"[Quick Check-in] Found event: {current_event.title}")
 
         # Perform check-in
         attendance = await attendance_service.manual_check_in(
