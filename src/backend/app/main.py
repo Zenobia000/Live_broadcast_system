@@ -43,6 +43,16 @@ app = FastAPI(
 )
 
 # Middleware Configuration
+# CORS middleware - MUST be first to handle preflight requests
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:3000", "http://localhost:5173"],  # Vite default ports
+    allow_credentials=True,
+    allow_methods=["*"],  # Allow all methods
+    allow_headers=["*"],  # Allow all headers
+    expose_headers=["*"],
+)
+
 # Session middleware for OAuth flow
 app.add_middleware(
     SessionMiddleware,
@@ -52,15 +62,6 @@ app.add_middleware(
     same_site="lax",
     https_only=False,  # Set to True in production with HTTPS
     path="/",
-)
-
-# CORS middleware
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=settings.ALLOWED_ORIGINS,
-    allow_credentials=True,
-    allow_methods=["GET", "POST", "PUT", "DELETE"],
-    allow_headers=["*"],
 )
 
 
