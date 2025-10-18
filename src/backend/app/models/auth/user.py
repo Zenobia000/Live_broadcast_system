@@ -7,9 +7,10 @@ Design Philosophy:
 - Immutable user records (no soft delete - users are historical facts)
 """
 
+from datetime import datetime
 from typing import TYPE_CHECKING, List, Optional
 
-from sqlalchemy import Integer, String
+from sqlalchemy import DateTime, Integer, String, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models.base import Base, TimestampMixin, UUIDMixin
@@ -80,6 +81,25 @@ class User(Base, UUIDMixin, TimestampMixin):
         default=UserRole.MEMBER.value,
         server_default=UserRole.MEMBER.value,
         comment="User role: MEMBER (regular user) or ADMIN (administrator)"
+    )
+
+    # Google Calendar API Tokens (for long-term calendar access)
+    google_refresh_token: Mapped[Optional[str]] = mapped_column(
+        Text,
+        nullable=True,
+        comment="Google OAuth refresh token for Calendar API access"
+    )
+
+    google_access_token: Mapped[Optional[str]] = mapped_column(
+        Text,
+        nullable=True,
+        comment="Google OAuth access token (cached, refreshable)"
+    )
+
+    google_token_expires_at: Mapped[Optional[datetime]] = mapped_column(
+        DateTime(timezone=True),
+        nullable=True,
+        comment="When the current access token expires"
     )
 
     # Relationships

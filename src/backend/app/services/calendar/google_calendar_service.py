@@ -2,35 +2,91 @@
 Google Calendar API service for event synchronization.
 
 Design Philosophy:
-- Clean abstraction over Google Calendar API
+- Clean abstraction over Google Calendar API with automatic token refresh
+- Integration with User model for token management
 - Event synchronization with local database
 - Robust error handling for API failures
 """
 
+import logging
 from datetime import datetime, timedelta
 from typing import Dict, List, Optional
 
-from google.oauth2.credentials import Credentials
-from googleapiclient.discovery import build
-from googleapiclient.errors import HttpError
+import httpx
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
+from app.models.auth.user import User
 from app.models.calendar.event import Event
+
+logger = logging.getLogger(__name__)
 
 
 class GoogleCalendarService:
-    """Google Calendar API service."""
+    """Google Calendar API service with automatic token management."""
 
-    def __init__(self, credentials: Optional[Credentials] = None):
-        """Initialize Google Calendar service.
+    def __init__(self, user: User, db_session: AsyncSession):
+        """Initialize Google Calendar service for a specific user.
 
         Args:
-            credentials: Google OAuth credentials for API access
+            user: User model with Google OAuth tokens
+            db_session: Database session for token updates
         """
-        self.credentials = credentials
-        self.service = None
-        if credentials:
-            self.service = build('calendar', 'v3', credentials=credentials)
+        self.user = user
+        self.db_session = db_session
+        self.base_url = "https://www.googleapis.com/calendar/v3"
+
+    async def _get_valid_access_token(self) -> str:
+        """Get a valid access token, refreshing if necessary.
+
+        Returns:
+            Valid Google OAuth access token
+
+        Raises:
+            Exception: If token refresh fails or user has no refresh token
+        """
+        # Check if access token is still valid
+        if self.user.google_access_token and self.user.google_token_expires_at:
+            if datetime.utcnow() < self.user.google_token_expires_at - timedelta(minutes=5):
+                # Token is valid for at least 5 more minutes
+                return self.user.google_access_token
+
+        # Need to refresh token
+        if not self.user.google_refresh_token:
+            raise Exception("User has no refresh token - must re-authenticate with Calendar scopes")
+
+        logger.info(f"[Calendar] Refreshing access token for user {self.user.email}")
+
+        async with httpx.AsyncClient() as client:
+            response = await client.post(
+                'https://oauth2.googleapis.com/token',
+                data={
+                    'client_id': settings.GOOGLE_CLIENT_ID,
+                    'client_secret': settings.GOOGLE_CLIENT_SECRET,
+                    'refresh_token': self.user.google_refresh_token,
+                    'grant_type': 'refresh_token',
+                }
+            )
+
+            if response.status_code != 200:
+                logger.error(f"[Calendar] Token refresh failed: {response.text}")
+                raise Exception(f"Token refresh failed: {response.text}")
+
+            token_data = response.json()
+
+            # Update user's access token
+            self.user.google_access_token = token_data['access_token']
+            self.user.google_token_expires_at = datetime.utcnow() + timedelta(
+                seconds=token_data.get('expires_in', 3600)
+            )
+
+            # Persist to database
+            await self.db_session.commit()
+            await self.db_session.refresh(self.user)
+
+            logger.info(f"[Calendar] Token refreshed successfully for user {self.user.email}")
+
+            return self.user.google_access_token
 
     async def list_events(
         self,
@@ -53,8 +109,7 @@ class GoogleCalendarService:
         Raises:
             Exception: If Calendar API call fails
         """
-        if not self.service:
-            raise ValueError("Calendar service not initialized with credentials")
+        access_token = await self._get_valid_access_token()
 
         try:
             # Set default time range if not provided
@@ -67,17 +122,25 @@ class GoogleCalendarService:
             time_min_str = time_min.isoformat() + 'Z'
             time_max_str = time_max.isoformat() + 'Z'
 
-            # Call Google Calendar API
-            events_result = self.service.events().list(
-                calendarId=calendar_id,
-                timeMin=time_min_str,
-                timeMax=time_max_str,
-                maxResults=max_results,
-                singleEvents=True,
-                orderBy='startTime'
-            ).execute()
+            # Call Google Calendar API using httpx
+            params = {
+                'timeMin': time_min_str,
+                'timeMax': time_max_str,
+                'maxResults': max_results,
+                'singleEvents': True,
+                'orderBy': 'startTime',
+            }
 
-            events = events_result.get('items', [])
+            async with httpx.AsyncClient() as client:
+                response = await client.get(
+                    f"{self.base_url}/calendars/{calendar_id}/events",
+                    headers={'Authorization': f'Bearer {access_token}'},
+                    params=params
+                )
+                response.raise_for_status()
+                data = response.json()
+
+            events = data.get('items', [])
 
             # Filter events that have start/end times (not all-day events)
             filtered_events = []
@@ -95,9 +158,11 @@ class GoogleCalendarService:
                         'creator': event.get('creator', {})
                     })
 
+            logger.info(f"[Calendar] Retrieved {len(filtered_events)} events for user {self.user.email}")
             return filtered_events
 
-        except HttpError as error:
+        except httpx.HTTPStatusError as error:
+            logger.error(f"[Calendar] API error: {error.response.text}")
             raise Exception(f"Google Calendar API error: {error}")
 
     async def get_event(self, event_id: str, calendar_id: str = 'primary') -> Optional[Dict]:
@@ -113,14 +178,16 @@ class GoogleCalendarService:
         Raises:
             Exception: If Calendar API call fails
         """
-        if not self.service:
-            raise ValueError("Calendar service not initialized with credentials")
+        access_token = await self._get_valid_access_token()
 
         try:
-            event = self.service.events().get(
-                calendarId=calendar_id,
-                eventId=event_id
-            ).execute()
+            async with httpx.AsyncClient() as client:
+                response = await client.get(
+                    f"{self.base_url}/calendars/{calendar_id}/events/{event_id}",
+                    headers={'Authorization': f'Bearer {access_token}'}
+                )
+                response.raise_for_status()
+                event = response.json()
 
             # Return formatted event data
             start = event['start'].get('dateTime')
@@ -138,22 +205,86 @@ class GoogleCalendarService:
                 'creator': event.get('creator', {})
             }
 
-        except HttpError as error:
-            if error.resp.status == 404:
+        except httpx.HTTPStatusError as error:
+            if error.response.status_code == 404:
                 return None  # Event not found
+            logger.error(f"[Calendar] Get event error: {error.response.text}")
             raise Exception(f"Google Calendar API error: {error}")
 
-    def parse_datetime(self, datetime_str: str) -> datetime:
+    async def check_if_user_in_event_now(self) -> Optional[Dict]:
+        """Check if user should be in an event right now.
+
+        This checks if there's a calendar event happening at the current time
+        that the user should attend (for automatic check-in).
+
+        Returns:
+            Current event dict if user should be in an event, None otherwise
+        """
+        now = datetime.utcnow()
+
+        # Get events from 1 hour ago to 1 hour in the future
+        # (to catch events that started recently)
+        time_min = now - timedelta(hours=1)
+        time_max = now + timedelta(hours=1)
+
+        events = await self.list_events(
+            time_min=time_min,
+            time_max=time_max,
+            max_results=10
+        )
+
+        # Check which event the user should be in right now
+        for event in events:
+            start_time = self.parse_datetime(event['start_time'])
+            end_time = self.parse_datetime(event['end_time'])
+
+            if start_time and end_time:
+                if start_time <= now <= end_time:
+                    logger.info(f"[Calendar] User {self.user.email} should be in event: {event.get('title')}")
+                    return event
+
+        return None
+
+    async def get_upcoming_events_for_today(self) -> List[Dict]:
+        """Get upcoming events for today (from now until end of day).
+
+        This is a convenience method for attendance checking.
+
+        Returns:
+            List of events happening today
+        """
+        now = datetime.utcnow()
+        end_of_day = now.replace(hour=23, minute=59, second=59, microsecond=999999)
+
+        return await self.list_events(
+            time_min=now,
+            time_max=end_of_day,
+            order_by='startTime'
+        )
+
+    def parse_datetime(self, datetime_str: str) -> Optional[datetime]:
         """Parse Google Calendar datetime string.
 
         Args:
             datetime_str: RFC3339 datetime string from Google Calendar
 
         Returns:
-            Parsed datetime object in UTC
+            Parsed datetime object in UTC or None if parsing fails
         """
-        from dateutil import parser
-        return parser.parse(datetime_str).replace(tzinfo=None)
+        if not datetime_str:
+            return None
+
+        try:
+            # Remove 'Z' suffix and parse
+            if datetime_str.endswith('Z'):
+                datetime_str = datetime_str[:-1] + '+00:00'
+
+            # Try parsing with timezone, then convert to naive UTC
+            from dateutil import parser
+            return parser.parse(datetime_str).replace(tzinfo=None)
+        except Exception as e:
+            logger.error(f"[Calendar] Failed to parse datetime '{datetime_str}': {e}")
+            return None
 
     async def sync_events_to_database(
         self,

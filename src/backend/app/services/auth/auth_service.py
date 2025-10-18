@@ -59,6 +59,8 @@ class AuthService:
         Raises:
             Exception: If authentication fails
         """
+        from datetime import datetime, timedelta
+
         # Exchange code for token and get user info
         oauth_data = await self.oauth_service.exchange_code_for_token(
             request, code, state
@@ -76,7 +78,7 @@ class AuthService:
             )
 
         if not user:
-            # Create new user
+            # Create new user with Google Calendar tokens
             logger.info(f"[Auth] Creating new user for {oauth_data['email']}")
             user = await self.user_service.create_user(
                 email=oauth_data['email'],
@@ -94,6 +96,21 @@ class AuthService:
                 name=oauth_data['name'],
                 avatar_url=oauth_data.get('avatar_url')
             )
+
+        # Store Google Calendar tokens (refresh token and access token)
+        # This enables long-term Calendar API access without re-authentication
+        if oauth_data.get('refresh_token'):
+            user.google_refresh_token = oauth_data['refresh_token']
+            logger.info(f"[Auth] Stored refresh token for Calendar API access")
+
+        user.google_access_token = oauth_data['access_token']
+        user.google_token_expires_at = datetime.utcnow() + timedelta(
+            seconds=oauth_data.get('expires_in', 3600)
+        )
+        logger.info(f"[Auth] Stored access token (expires in {oauth_data.get('expires_in', 3600)}s)")
+
+        # Save updated tokens to database
+        user = await self.user_service.user_repository.update(user)
 
         # Generate JWT access token
         logger.info(f"[Auth] Generating JWT token for user: {user.id}")

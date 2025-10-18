@@ -25,14 +25,25 @@ class GoogleOAuthService:
 
     def __init__(self):
         self.oauth = OAuth()
+
+        # Build scopes: basic auth + calendar access
+        scopes = [
+            'openid',
+            'email',
+            'profile',
+            'https://www.googleapis.com/auth/calendar.readonly',
+            'https://www.googleapis.com/auth/calendar.events.readonly'
+        ]
+
         self.oauth.register(
             name='google',
             client_id=settings.GOOGLE_CLIENT_ID,
             client_secret=settings.GOOGLE_CLIENT_SECRET,
             server_metadata_url='https://accounts.google.com/.well-known/openid-configuration',
             client_kwargs={
-                'scope': 'openid email profile',
+                'scope': ' '.join(scopes),
                 'prompt': 'select_account',
+                'access_type': 'offline',  # Request refresh token for long-term calendar access
             }
         )
 
@@ -133,7 +144,9 @@ class GoogleOAuthService:
                 'name': user_info['name'],
                 'avatar_url': user_info.get('picture'),
                 'access_token': token['access_token'],
+                'refresh_token': token.get('refresh_token'),  # For Calendar API long-term access
                 'id_token': token.get('id_token'),
+                'expires_in': token.get('expires_in', 3600),
             }
 
         except Exception as e:
