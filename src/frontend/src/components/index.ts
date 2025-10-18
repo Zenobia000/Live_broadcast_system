@@ -22,3 +22,6 @@ export type { LoadingSpinnerProps, LoadingOverlayProps, PageLoadingProps, Button
 // Toast Components
 export { default as Toast, ToastContainer, ToastManager, useToast, showToast } from './Toast'
 export type { ToastProps, ToastType, ToastAction, ToastContainerProps } from './Toast'
+
+// Attendance Components
+export { default as AttendanceHeatmap } from './AttendanceHeatmap'

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react'
-import { Card, CardBody, Button, Badge, LoadingSpinner, CardSkeleton, showToast } from '../components'
+import { Card, CardBody, Button, Badge, LoadingSpinner, CardSkeleton, showToast, AttendanceHeatmap } from '../components'
 import { api, TodayStatus, AttendanceStatus, User } from '../services/api'
 import { SmartURLGenerator } from '../utils/navigation'
 
@@ -67,7 +67,8 @@ const DashboardPage: React.FC = () => {
 
   const loadAttendanceHistory = async () => {
     try {
-      const response = await api.getAttendanceHistory(5)
+      // Load more history for heatmap visualization (12 weeks = 84 days, so fetch 100)
+      const response = await api.getAttendanceHistory(100)
       if (response.success) {
         setAttendanceHistory(response.data)
         // Cache for offline use
@@ -384,6 +385,36 @@ const DashboardPage: React.FC = () => {
     )
   }
 
+  // Convert attendance history to heatmap data
+  const generateHeatmapData = () => {
+    const dataMap = new Map<string, {
+      date: string
+      status: 'present' | 'late' | 'absent' | 'leave'
+      count: number
+    }>()
+
+    attendanceHistory.forEach(record => {
+      const date = new Date(record.createdAt).toISOString().split('T')[0]
+      const existing = dataMap.get(date)
+
+      if (existing) {
+        existing.count += 1
+        // Keep the worst status (absent > late > present)
+        if (record.status === 'absent' || existing.status !== 'absent' && record.status === 'late') {
+          existing.status = record.status as any
+        }
+      } else {
+        dataMap.set(date, {
+          date,
+          status: record.status as any,
+          count: 1
+        })
+      }
+    })
+
+    return Array.from(dataMap.values())
+  }
+
   const renderRecentHistory = () => {
     if (attendanceHistory.length === 0) {
       return (
@@ -396,7 +427,7 @@ const DashboardPage: React.FC = () => {
 
     return (
       <div className="space-y-3">
-        {attendanceHistory.map((record) => (
+        {attendanceHistory.slice(0, 5).map((record) => (
           <div key={record.id} className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
             <div className="flex items-center space-x-3">
               <div className="text-lg">
@@ -514,6 +545,27 @@ const DashboardPage: React.FC = () => {
         {/* Today's Status */}
         <section>
           {renderStatusCard()}
+        </section>
+
+        {/* Attendance Heatmap - GitHub Style */}
+        <section>
+          <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+            <span>📊</span>
+            簽到活動圖
+          </h2>
+          <Card>
+            <CardBody>
+              {attendanceHistory.length > 0 ? (
+                <AttendanceHeatmap data={generateHeatmapData()} weeks={12} />
+              ) : (
+                <div className="text-center py-12 text-gray-500 dark:text-gray-400">
+                  <div className="text-6xl mb-4">📅</div>
+                  <p className="text-lg font-medium mb-2">尚無簽到記錄</p>
+                  <p className="text-sm">開始簽到後，這裡會顯示你的簽到活動圖</p>
+                </div>
+              )}
+            </CardBody>
+          </Card>
         </section>
 
         {/* Quick Actions */}
