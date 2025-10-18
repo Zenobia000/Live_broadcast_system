@@ -15,7 +15,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.dependencies.auth import CurrentUser
-from app.api.dependencies.database import get_db_session
+from app.core.database import get_session as get_db_session
 from app.api.v1.schemas.calendar import (
     CalendarErrorResponse,
     CalendarEventListResponse,

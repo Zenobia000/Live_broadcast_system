@@ -16,7 +16,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.dependencies.attendance import AttendanceServiceDep
 from app.api.dependencies.auth import AdminUser, CurrentUser
-from app.api.dependencies.database import get_db_session
+from app.core.database import get_session as get_db_session
 from app.api.v1.schemas.attendance import (
     AttendanceResponse,
     AttendanceWithDetails,
