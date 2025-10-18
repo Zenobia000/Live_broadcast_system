@@ -175,7 +175,8 @@ class ApiClient {
   // Authentication APIs
   async getGoogleAuthUrl(): Promise<{ authorization_url: string; state: string }> {
     const response = await this.client.get('/auth/login/google')
-    return response.data
+    // Response is wrapped in ApiResponse format by interceptor
+    return response.data.success ? response.data.data : response.data
   }
 
   async googleAuth(authCode: string): Promise<ApiResponse<{ token: string; user: User }>> {
