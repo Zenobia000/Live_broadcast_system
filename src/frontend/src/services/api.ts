@@ -214,6 +214,71 @@ class ApiClient {
     return response.data
   }
 
+  async autoCheckInFromCalendar(): Promise<ApiResponse<{
+    checked_in: boolean
+    message: string
+    event: {
+      id: string
+      title: string
+      start_time: string
+      end_time: string
+    } | null
+    attendance: {
+      id: string
+      status: string
+      check_in_time: string
+      is_late: boolean
+      late_minutes: number
+    } | null
+  }>> {
+    const response = await this.client.post('/attendance/auto-checkin-calendar')
+    return response.data
+  }
+
+  // Calendar APIs
+  async getCalendarEvents(daysAhead = 7): Promise<ApiResponse<{
+    events: Array<{
+      id: string
+      title: string
+      description?: string
+      start_time: string
+      end_time: string
+      creator?: any
+    }>
+    total: number
+  }>> {
+    const response = await this.client.get(`/calendar/events?days_ahead=${daysAhead}`)
+    return response.data
+  }
+
+  async getTodayCalendarEvents(): Promise<ApiResponse<{
+    events: Array<{
+      id: string
+      title: string
+      description?: string
+      start_time: string
+      end_time: string
+    }>
+    total: number
+  }>> {
+    const response = await this.client.get('/calendar/events/today')
+    return response.data
+  }
+
+  async getCheckInStatus(): Promise<ApiResponse<{
+    should_check_in: boolean
+    current_event: {
+      id: string
+      title: string
+      start_time: string
+      end_time: string
+    } | null
+    message: string
+  }>> {
+    const response = await this.client.get('/calendar/check-in-status')
+    return response.data
+  }
+
   // Leave Request APIs
   async submitLeaveRequest(data: {
     startDate: string
@@ -302,6 +367,12 @@ export const api = {
   getTodayStatus: () => apiClient.getTodayStatus(),
   getAttendanceHistory: (limit?: number) => apiClient.getAttendanceHistory(limit),
   manualCheckIn: () => apiClient.manualCheckIn(),
+  autoCheckInFromCalendar: () => apiClient.autoCheckInFromCalendar(),
+
+  // Calendar
+  getCalendarEvents: (daysAhead?: number) => apiClient.getCalendarEvents(daysAhead),
+  getTodayCalendarEvents: () => apiClient.getTodayCalendarEvents(),
+  getCheckInStatus: () => apiClient.getCheckInStatus(),
 
   // Leave Requests
   submitLeaveRequest: (data: Parameters<typeof apiClient.submitLeaveRequest>[0]) =>

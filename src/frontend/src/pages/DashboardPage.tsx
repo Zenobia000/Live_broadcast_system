@@ -13,16 +13,21 @@ const DashboardPage: React.FC = () => {
   useEffect(() => {
     loadInitialData()
     setupPolling()
+    setupAutoCheckIn()
 
     // Cleanup polling on unmount
     return () => {
       if (pollingInterval) {
         window.clearInterval(pollingInterval)
       }
+      if (autoCheckInInterval) {
+        window.clearInterval(autoCheckInInterval)
+      }
     }
   }, [])
 
   let pollingInterval: number | null = null
+  let autoCheckInInterval: number | null = null
 
   const loadInitialData = async () => {
     try {
@@ -113,9 +118,61 @@ const DashboardPage: React.FC = () => {
     })
   }
 
+  const setupAutoCheckIn = () => {
+    // Auto check-in on page load
+    performAutoCheckIn()
+
+    // Check every 5 minutes for auto check-in
+    autoCheckInInterval = window.setInterval(async () => {
+      if (!document.hidden) {
+        await performAutoCheckIn()
+      }
+    }, 5 * 60 * 1000) // 5 minutes
+
+    // Also check when page becomes visible
+    document.addEventListener('visibilitychange', () => {
+      if (!document.hidden) {
+        performAutoCheckIn()
+      }
+    })
+  }
+
+  const performAutoCheckIn = async () => {
+    try {
+      const response = await api.autoCheckInFromCalendar()
+
+      if (response.success && response.data.checked_in) {
+        const { event, attendance } = response.data
+
+        // Show success notification
+        const statusEmoji = attendance?.is_late ? '⏰' : '✅'
+        const statusText = attendance?.is_late ? '遲到簽到' : '準時簽到'
+        const lateInfo = attendance?.is_late
+          ? ` (遲到 ${attendance.late_minutes} 分鐘)`
+          : ''
+
+        showToast({
+          type: attendance?.is_late ? 'warning' : 'success',
+          message: `${statusEmoji} ${statusText}：${event?.title}${lateInfo}`,
+          autoClose: 5000
+        })
+
+        // Refresh data
+        await Promise.all([
+          loadTodayStatus(),
+          loadAttendanceHistory()
+        ])
+      }
+    } catch (error: any) {
+      // Silently handle errors - don't show toast for every check
+      console.log('[Auto Check-in] No event or error:', error.response?.data?.message || error.message)
+    }
+  }
+
   const handleRefresh = async () => {
     setRefreshing(true)
     await loadInitialData()
+    await performAutoCheckIn() // Also check for auto check-in
     setRefreshing(false)
 
     showToast({
@@ -123,6 +180,52 @@ const DashboardPage: React.FC = () => {
       message: '資料已更新',
       autoClose: 2000
     })
+  }
+
+  const handleForceAutoCheckIn = async () => {
+    try {
+      showToast({
+        type: 'info',
+        message: '檢查中...',
+        autoClose: 2000
+      })
+
+      const response = await api.autoCheckInFromCalendar()
+
+      if (response.success) {
+        if (response.data.checked_in) {
+          const { event, attendance } = response.data
+          const statusEmoji = attendance?.is_late ? '⏰' : '✅'
+          const statusText = attendance?.is_late ? '遲到簽到' : '準時簽到'
+          const lateInfo = attendance?.is_late
+            ? ` (遲到 ${attendance.late_minutes} 分鐘)`
+            : ''
+
+          showToast({
+            type: attendance?.is_late ? 'warning' : 'success',
+            message: `${statusEmoji} ${statusText}：${event?.title}${lateInfo}`,
+            autoClose: 5000
+          })
+
+          await Promise.all([
+            loadTodayStatus(),
+            loadAttendanceHistory()
+          ])
+        } else {
+          showToast({
+            type: 'info',
+            message: response.data.message || '目前沒有需要簽到的事件',
+            autoClose: 3000
+          })
+        }
+      }
+    } catch (error: any) {
+      showToast({
+        type: 'error',
+        message: error.response?.data?.message || '自動簽到檢查失敗',
+        autoClose: 5000
+      })
+    }
   }
 
   const handleManualCheckIn = async () => {
@@ -213,16 +316,27 @@ const DashboardPage: React.FC = () => {
             </div>
           </div>
 
-          {!todayStatus.isCheckedIn && (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleManualCheckIn}
-              className="ml-4"
-            >
-              手動簽到
-            </Button>
-          )}
+          <div className="flex gap-2">
+            {!todayStatus.isCheckedIn && (
+              <>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleForceAutoCheckIn}
+                  className="flex items-center gap-1"
+                >
+                  <span>📅</span> Calendar 簽到
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleManualCheckIn}
+                >
+                  手動簽到
+                </Button>
+              </>
+            )}
+          </div>
         </CardBody>
       </Card>
     )
