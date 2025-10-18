@@ -88,6 +88,11 @@ async def get_today_status(
     # No check-in today, first check for CURRENT ongoing events
     now = now_utc  # Use the UTC time we already calculated
 
+    # Debug logging
+    import logging
+    logger = logging.getLogger(__name__)
+    logger.info(f"[Attendance] Checking for ongoing events at UTC: {now.isoformat()}")
+
     current_event_query = (
         select(Event)
         .where(
@@ -102,6 +107,14 @@ async def get_today_status(
 
     current_result = await db.execute(current_event_query)
     current_event = current_result.scalar_one_or_none()
+
+    if current_event:
+        logger.info(f"[Attendance] Found current event: {current_event.title}")
+        logger.info(f"[Attendance] Event start_time: {current_event.start_time} (tzinfo: {current_event.start_time.tzinfo})")
+        logger.info(f"[Attendance] Event end_time: {current_event.end_time} (tzinfo: {current_event.end_time.tzinfo})")
+        logger.info(f"[Attendance] Current UTC time: {now} (tzinfo: {now.tzinfo})")
+    else:
+        logger.info(f"[Attendance] No current ongoing event found")
 
     # If there's a current ongoing event, show it
     if current_event:
