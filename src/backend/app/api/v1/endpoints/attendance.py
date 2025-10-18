@@ -293,13 +293,98 @@ async def get_attendance_history(
     ]
 
 
-@router.post("/checkin", response_model=CheckInResponse)
+@router.post("/checkin")
+async def quick_check_in(
+    current_user: CurrentUser,
+    attendance_service: AttendanceServiceDep,
+    db: AsyncSession = Depends(get_db_session)
+):
+    """Quick manual check-in for current ongoing event.
+
+    Automatically finds the current ongoing event and checks in.
+    This is the simplified version for the "手動簽到" button.
+
+    Args:
+        current_user: Current authenticated user
+
+    Returns:
+        Check-in result with attendance record
+    """
+    from datetime import datetime
+    from app.models.calendar.event import Event
+    from sqlalchemy import select, and_
+
+    try:
+        # Find current ongoing event
+        now = datetime.utcnow()
+        query = (
+            select(Event)
+            .where(
+                and_(
+                    Event.start_time <= now,
+                    Event.end_time >= now
+                )
+            )
+            .order_by(Event.start_time.desc())
+            .limit(1)
+        )
+
+        result = await db.execute(query)
+        current_event = result.scalar_one_or_none()
+
+        if not current_event:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="目前沒有進行中的事件可以簽到"
+            )
+
+        # Perform check-in
+        attendance = await attendance_service.manual_check_in(
+            user_id=current_user.id,
+            event_id=current_event.id,
+            check_in_time=None  # Use current time
+        )
+
+        was_late = attendance.status.value == "LATE"
+
+        return {
+            "success": True,
+            "data": {
+                "id": str(attendance.id),
+                "userId": str(attendance.user_id),
+                "eventId": str(attendance.event_id),
+                "eventTitle": current_event.title,
+                "status": attendance.status.value.lower(),
+                "checkInTime": attendance.check_in_time.isoformat() if attendance.check_in_time else None,
+                "wasLate": was_late,
+                "message": f"成功簽到：{current_event.title}" + (" (遲到)" if was_late else "")
+            }
+        }
+
+    except HTTPException:
+        raise
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e)
+        )
+    except Exception as e:
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.error(f"Quick check-in error: {str(e)}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"簽到失敗: {str(e)}"
+        )
+
+
+@router.post("/checkin-event", response_model=CheckInResponse)
 async def manual_check_in_with_event(
     checkin_request: CheckInRequest,
     current_user: CurrentUser,
     attendance_service: AttendanceServiceDep
 ):
-    """Manual check-in for specific event.
+    """Manual check-in for specific event (with event_id parameter).
 
     Args:
         checkin_request: Check-in request with event ID and optional time
