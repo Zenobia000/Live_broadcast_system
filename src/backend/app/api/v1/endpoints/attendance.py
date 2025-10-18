@@ -245,6 +245,60 @@ async def manual_check_in(
         )
 
 
+@router.get("/history")
+async def get_attendance_history(
+    current_user: CurrentUser,
+    attendance_service: AttendanceServiceDep,
+    limit: Optional[int] = 10,
+    start_date: Optional[datetime] = None,
+    end_date: Optional[datetime] = None
+):
+    """Get current user's attendance history.
+
+    Args:
+        current_user: Current authenticated user
+        limit: Maximum number of records to return (default 10)
+        start_date: Filter start date (optional)
+        end_date: Filter end date (optional)
+
+    Returns:
+        List of attendance records
+    """
+    try:
+        attendances = await attendance_service.get_user_attendance(
+            user_id=current_user.id,
+            start_date=start_date,
+            end_date=end_date
+        )
+
+        # Limit results
+        limited_attendances = attendances[:limit] if limit else attendances
+
+        # Return simplified response matching frontend expectations
+        return {
+            "success": True,
+            "data": [
+                {
+                    "id": str(attendance.id),
+                    "userId": str(attendance.user_id),
+                    "eventId": str(attendance.event_id),
+                    "eventTitle": "Event",  # TODO: Join with event table
+                    "status": attendance.status.value.lower(),
+                    "checkedInAt": attendance.check_in_time.isoformat() if attendance.check_in_time else None,
+                    "createdAt": attendance.created_at.isoformat(),
+                    "updatedAt": attendance.updated_at.isoformat()
+                }
+                for attendance in limited_attendances
+            ]
+        }
+
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=f"Failed to retrieve attendance history: {str(e)}"
+        )
+
+
 @router.get("/my-attendance", response_model=List[AttendanceWithDetails])
 async def get_my_attendance(
     current_user: CurrentUser,

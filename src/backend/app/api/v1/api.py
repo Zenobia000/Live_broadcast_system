@@ -6,7 +6,7 @@ Aggregates all v1 API endpoints into a single router.
 
 from fastapi import APIRouter
 
-from app.api.v1.endpoints import attendance, auth, calendar, events, requests
+from app.api.v1.endpoints import attendance, auth, calendar, events, requests, users
 
 api_router = APIRouter()
 
@@ -15,6 +15,13 @@ api_router.include_router(
     auth.router,
     prefix="/auth",
     tags=["authentication"]
+)
+
+# User endpoints
+api_router.include_router(
+    users.router,
+    prefix="/users",
+    tags=["users"]
 )
 
 # Calendar integration endpoints
