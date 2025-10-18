@@ -94,6 +94,7 @@ async def auto_check_in(
 @router.post("/auto-checkin-calendar", response_model=dict)
 async def auto_check_in_from_calendar(
     current_user: CurrentUser,
+    attendance_service: AttendanceServiceDep,
     db_session: AsyncSession = Depends(get_db_session),
 ):
     """Automatically check in user based on Google Calendar events.
@@ -141,41 +142,52 @@ async def auto_check_in_from_calendar(
                 "attendance": None
             }
 
-        # Event found! Now check if we need to create attendance record
-        # TODO: Implement actual attendance creation logic
-        # For now, return event information
-
         logger.info(
             f"[Auto Check-in] User {current_user.email} should be in event: {current_event.get('title')}"
         )
 
-        # Parse event times to determine if late
-        start_time_str = current_event.get('start_time')
-        start_time = calendar_service.parse_datetime(start_time_str)
-        now = datetime.utcnow()
+        # Create attendance record
+        attendance = await attendance_service.check_in_from_calendar_event(
+            user_id=current_user.id,
+            calendar_event=current_event,
+            check_in_time=datetime.utcnow()
+        )
 
-        is_late = now > start_time if start_time else False
-        late_minutes = int((now - start_time).total_seconds() / 60) if is_late and start_time else 0
+        # Calculate late minutes if late
+        start_time = calendar_service.parse_datetime(current_event.get('start_time'))
+        late_minutes = 0
+        if attendance.status.value == "LATE" and start_time and attendance.check_in_time:
+            late_minutes = int((attendance.check_in_time - start_time).total_seconds() / 60)
 
         return {
             "checked_in": True,
-            "message": f"Auto check-in for '{current_event.get('title')}'",
+            "message": f"Successfully checked in for '{current_event.get('title')}'",
             "event": {
                 "id": current_event.get('id'),
                 "title": current_event.get('title'),
-                "start_time": start_time_str,
+                "start_time": current_event.get('start_time'),
                 "end_time": current_event.get('end_time'),
             },
             "attendance": {
-                "status": "LATE" if is_late else "PRESENT",
-                "check_in_time": now.isoformat() + 'Z',
-                "is_late": is_late,
-                "late_minutes": late_minutes if is_late else 0
+                "id": str(attendance.id),
+                "status": attendance.status.value,
+                "check_in_time": attendance.check_in_time.isoformat() if attendance.check_in_time else None,
+                "is_late": attendance.status.value == "LATE",
+                "late_minutes": late_minutes
             }
         }
 
+    except ValueError as e:
+        # Handle business logic errors (e.g., already checked in, event ended)
+        logger.warning(f"[Auto Check-in] Validation error: {str(e)}")
+        return {
+            "checked_in": False,
+            "message": str(e),
+            "event": None,
+            "attendance": None
+        }
     except Exception as e:
-        logger.error(f"[Auto Check-in] Error: {str(e)}")
+        logger.error(f"[Auto Check-in] Error: {str(e)}", exc_info=True)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Auto check-in from calendar failed: {str(e)}"

@@ -198,6 +198,97 @@ class AttendanceService:
             note=note
         )
 
+    async def check_in_from_calendar_event(
+        self,
+        user_id: UUID,
+        calendar_event: Dict,
+        check_in_time: Optional[datetime] = None
+    ) -> Optional[Attendance]:
+        """Check in user from Google Calendar event.
+
+        This method handles the M2 milestone core functionality:
+        1. Sync Calendar event to Event table (if not exists)
+        2. Create attendance record
+        3. Determine PRESENT vs LATE status
+
+        Args:
+            user_id: User ID to check in
+            calendar_event: Google Calendar event data with keys:
+                - id: Google Calendar event ID
+                - title: Event title
+                - description: Event description (optional)
+                - start_time: Event start time (ISO 8601 string)
+                - end_time: Event end time (ISO 8601 string)
+            check_in_time: Check-in time (default: now)
+
+        Returns:
+            Attendance record or None if check-in not possible
+        """
+        from dateutil import parser as date_parser
+
+        if check_in_time is None:
+            check_in_time = datetime.utcnow()
+
+        google_event_id = calendar_event.get('id')
+        if not google_event_id:
+            raise ValueError("Calendar event must have an 'id' field")
+
+        # Parse event times
+        try:
+            start_time = date_parser.parse(calendar_event['start_time'])
+            # Make timezone-aware to UTC if naive
+            if start_time.tzinfo is None:
+                start_time = start_time.replace(tzinfo=datetime.timezone.utc)
+
+            end_time = date_parser.parse(calendar_event['end_time'])
+            if end_time.tzinfo is None:
+                end_time = end_time.replace(tzinfo=datetime.timezone.utc)
+        except (KeyError, ValueError) as e:
+            raise ValueError(f"Invalid event time format: {e}")
+
+        # Check if we're within event time window
+        if check_in_time < start_time:
+            raise ValueError("Cannot check in before event starts")
+        if check_in_time > end_time:
+            raise ValueError("Cannot check in after event has ended")
+
+        # Get or create event in our database
+        event = await self.event_repository.get_by_google_id(google_event_id)
+
+        if not event:
+            # Create new event record
+            event = await self.event_repository.create(
+                title=calendar_event.get('title', 'Untitled Event'),
+                description=calendar_event.get('description'),
+                start_time=start_time,
+                end_time=end_time,
+                google_event_id=google_event_id,
+                created_by=None,  # System-synced event
+                grace_period_minutes=5  # Default grace period
+            )
+
+        # Check if user already checked in for this event
+        existing_attendance = await self.attendance_repository.get_by_user_and_event(
+            user_id, event.id
+        )
+
+        if existing_attendance and existing_attendance.is_present_or_late:
+            # Already checked in, return existing record
+            return existing_attendance
+
+        # Determine if check-in is late
+        is_late = event.is_late_checkin(check_in_time)
+
+        # Create attendance record
+        attendance = await self.attendance_repository.check_in_user(
+            user_id=user_id,
+            event_id=event.id,
+            check_in_time=check_in_time,
+            is_late=is_late
+        )
+
+        return attendance
+
     async def get_attendance_summary(
         self,
         user_id: Optional[UUID] = None,
