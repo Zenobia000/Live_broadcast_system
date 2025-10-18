@@ -311,6 +311,8 @@ const DashboardPage: React.FC = () => {
               <div className="text-sm text-gray-600 dark:text-gray-400">
                 {todayStatus.isCheckedIn
                   ? todayStatus.checkInTime
+                  : todayStatus.eventTitle
+                  ? `📍 ${todayStatus.eventTitle} (${todayStatus.eventStartTime} - ${todayStatus.eventEndTime})`
                   : `下次事件：${todayStatus.nextEventTime || '無排程事件'}`
                 }
               </div>
@@ -318,7 +320,7 @@ const DashboardPage: React.FC = () => {
           </div>
 
           <div className="flex gap-2">
-            {!todayStatus.isCheckedIn && (
+            {!todayStatus.isCheckedIn && todayStatus.eventTitle && (
               <>
                 <Button
                   variant="outline"

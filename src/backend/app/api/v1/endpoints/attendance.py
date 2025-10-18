@@ -37,19 +37,24 @@ async def get_today_status(
     """Get today's attendance status for current user.
 
     Returns:
-        Today's attendance status with check-in information
+        Today's attendance status with check-in information (times in Taipei timezone UTC+8)
     """
-    from datetime import date, datetime, time, timezone
+    from datetime import date, datetime, time, timezone, timedelta
     from app.models.attendance.attendance import Attendance
     from app.models.calendar.event import Event
     from sqlalchemy import select, and_
 
-    # Use timezone-aware datetime
-    today = datetime.now(timezone.utc).date()
+    # Taipei timezone (UTC+8)
+    TAIPEI_TZ = timezone(timedelta(hours=8))
 
-    # Get today's attendance records (timezone-aware)
-    today_start = datetime.combine(today, time.min, tzinfo=timezone.utc)
-    today_end = datetime.combine(today, time.max, tzinfo=timezone.utc)
+    # Use timezone-aware datetime
+    now_utc = datetime.now(timezone.utc)
+    now_taipei = now_utc.astimezone(TAIPEI_TZ)
+    today = now_taipei.date()
+
+    # Get today's attendance records (timezone-aware, using Taipei timezone)
+    today_start = datetime.combine(today, time.min, tzinfo=TAIPEI_TZ).astimezone(timezone.utc)
+    today_end = datetime.combine(today, time.max, tzinfo=TAIPEI_TZ).astimezone(timezone.utc)
 
     query = (
         select(Attendance, Event)
@@ -70,20 +75,56 @@ async def get_today_status(
 
     if attendance_with_event:
         attendance, event = attendance_with_event
+        # Convert UTC time to Taipei time for display
+        check_in_taipei = attendance.check_in_time.astimezone(TAIPEI_TZ) if attendance.check_in_time else None
         return {
             "isCheckedIn": True,
-            "checkInTime": attendance.check_in_time.strftime("%H:%M") if attendance.check_in_time else None,
+            "checkInTime": check_in_taipei.strftime("%H:%M") if check_in_taipei else None,
             "eventTitle": event.title,
             "nextEventTime": None,
             "status": "late" if attendance.status.value == "late" else "present"
         }
 
-    # No check-in today, find next event
+    # No check-in today, first check for CURRENT ongoing events
+    now = now_utc  # Use the UTC time we already calculated
+
+    current_event_query = (
+        select(Event)
+        .where(
+            and_(
+                Event.start_time <= now,
+                Event.end_time >= now
+            )
+        )
+        .order_by(Event.start_time.desc())
+        .limit(1)
+    )
+
+    current_result = await db.execute(current_event_query)
+    current_event = current_result.scalar_one_or_none()
+
+    # If there's a current ongoing event, show it
+    if current_event:
+        # Convert event times from UTC to Taipei time for display
+        event_start_taipei = current_event.start_time.astimezone(TAIPEI_TZ)
+        event_end_taipei = current_event.end_time.astimezone(TAIPEI_TZ)
+        return {
+            "isCheckedIn": False,
+            "checkInTime": None,
+            "eventTitle": current_event.title,
+            "eventId": str(current_event.id),
+            "eventStartTime": event_start_taipei.strftime("%H:%M"),
+            "eventEndTime": event_end_taipei.strftime("%H:%M"),
+            "nextEventTime": None,
+            "status": "waiting"
+        }
+
+    # No current event, find next upcoming event
     # Note: Find all upcoming events, not just user-created ones
     # Users need to attend events they're invited to, not just ones they created
     next_event_query = (
         select(Event)
-        .where(Event.start_time > datetime.now(timezone.utc))
+        .where(Event.start_time > now)
         .order_by(Event.start_time.asc())
         .limit(1)
     )
@@ -91,11 +132,17 @@ async def get_today_status(
     next_result = await db.execute(next_event_query)
     next_event = next_result.scalar_one_or_none()
 
+    # Convert next event time to Taipei time if exists
+    next_event_time_str = None
+    if next_event:
+        next_event_taipei = next_event.start_time.astimezone(TAIPEI_TZ)
+        next_event_time_str = next_event_taipei.strftime("%H:%M")
+
     return {
         "isCheckedIn": False,
         "checkInTime": None,
         "eventTitle": None,
-        "nextEventTime": next_event.start_time.strftime("%H:%M") if next_event else None,
+        "nextEventTime": next_event_time_str,
         "status": "waiting"
     }
 

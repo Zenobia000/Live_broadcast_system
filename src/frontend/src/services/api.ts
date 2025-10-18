@@ -34,6 +34,9 @@ export interface TodayStatus {
   isCheckedIn: boolean
   checkInTime?: string
   eventTitle?: string
+  eventId?: string
+  eventStartTime?: string
+  eventEndTime?: string
   nextEventTime?: string
   status: 'present' | 'absent' | 'late' | 'waiting'
 }
