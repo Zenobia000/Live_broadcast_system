@@ -39,16 +39,17 @@ async def get_today_status(
     Returns:
         Today's attendance status with check-in information
     """
-    from datetime import date, datetime, time
+    from datetime import date, datetime, time, timezone
     from app.models.attendance.attendance import Attendance
     from app.models.calendar.event import Event
     from sqlalchemy import select, and_
 
-    today = date.today()
+    # Use timezone-aware datetime
+    today = datetime.now(timezone.utc).date()
 
-    # Get today's attendance records
-    today_start = datetime.combine(today, time.min)
-    today_end = datetime.combine(today, time.max)
+    # Get today's attendance records (timezone-aware)
+    today_start = datetime.combine(today, time.min, tzinfo=timezone.utc)
+    today_end = datetime.combine(today, time.max, tzinfo=timezone.utc)
 
     query = (
         select(Attendance, Event)
@@ -82,7 +83,7 @@ async def get_today_status(
     # Users need to attend events they're invited to, not just ones they created
     next_event_query = (
         select(Event)
-        .where(Event.start_time > datetime.now())
+        .where(Event.start_time > datetime.now(timezone.utc))
         .order_by(Event.start_time.asc())
         .limit(1)
     )
@@ -316,7 +317,10 @@ async def quick_check_in(
 
     try:
         # Find current ongoing event
-        now = datetime.utcnow()
+        # Use timezone-aware datetime for proper comparison
+        from datetime import timezone
+        now = datetime.now(timezone.utc)
+
         query = (
             select(Event)
             .where(
