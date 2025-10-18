@@ -78,14 +78,11 @@ async def get_today_status(
         }
 
     # No check-in today, find next event
+    # Note: Find all upcoming events, not just user-created ones
+    # Users need to attend events they're invited to, not just ones they created
     next_event_query = (
         select(Event)
-        .where(
-            and_(
-                Event.creator_id == current_user.id,
-                Event.start_time > datetime.now()
-            )
-        )
+        .where(Event.start_time > datetime.now())
         .order_by(Event.start_time.asc())
         .limit(1)
     )

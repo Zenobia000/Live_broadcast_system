@@ -6,6 +6,7 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 from starlette.middleware.sessions import SessionMiddleware
 
 from app.api.v1.api import api_router
@@ -69,11 +70,14 @@ app.add_middleware(
 async def global_exception_handler(request, exc):
     """Global exception handler for unhandled exceptions."""
     logger.error(f"Unhandled exception: {exc}", exc_info=True)
-    return {
-        "status": "error",
-        "message": "Internal server error",
-        "detail": str(exc) if settings.DEBUG else "An unexpected error occurred"
-    }
+    return JSONResponse(
+        status_code=500,
+        content={
+            "status": "error",
+            "message": "Internal server error",
+            "detail": str(exc) if settings.DEBUG else "An unexpected error occurred"
+        }
+    )
 
 
 # Include API v1 router
