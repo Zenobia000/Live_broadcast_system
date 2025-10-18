@@ -102,9 +102,20 @@ class ApiClient {
       }
     )
 
-    // Response interceptor for error handling
+    // Response interceptor for error handling and response wrapping
     this.client.interceptors.response.use(
       (response: AxiosResponse) => {
+        // Wrap response data in ApiResponse format if not already wrapped
+        if (response.data && typeof response.data === 'object') {
+          // Check if response is already in ApiResponse format
+          if (!('success' in response.data)) {
+            // Wrap the response
+            response.data = {
+              success: true,
+              data: response.data
+            }
+          }
+        }
         return response
       },
       (error: AxiosError) => {
