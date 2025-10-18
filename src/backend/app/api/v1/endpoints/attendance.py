@@ -82,7 +82,7 @@ async def get_today_status(
             "checkInTime": check_in_taipei.strftime("%H:%M") if check_in_taipei else None,
             "eventTitle": event.title,
             "nextEventTime": None,
-            "status": "late" if attendance.status.value == "late" else "present"
+            "status": "late" if attendance.status == "late" else "present"
         }
 
     # No check-in today, first check for CURRENT ongoing events
@@ -356,7 +356,7 @@ async def get_attendance_history(
             "userId": str(attendance.user_id),
             "eventId": str(attendance.event_id),
             "eventTitle": event.title,
-            "status": attendance.status.value.lower(),
+            "status": attendance.status.lower() if isinstance(attendance.status, str) else attendance.status,
             "checkedInAt": attendance.check_in_time.isoformat() if attendance.check_in_time else None,
             "createdAt": attendance.created_at.isoformat(),
             "updatedAt": attendance.updated_at.isoformat()
