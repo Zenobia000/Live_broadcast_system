@@ -93,12 +93,16 @@ async def get_today_status(
     logger = logging.getLogger(__name__)
     logger.info(f"[Attendance] Checking for ongoing events at UTC: {now.isoformat()}")
 
+    # Convert datetime to string with timezone for SQLite compatibility
+    now_str = now.isoformat()
+    logger.info(f"[Attendance] Query parameter: {now_str}")
+
     current_event_query = (
         select(Event)
         .where(
             and_(
-                Event.start_time <= now,
-                Event.end_time >= now
+                Event.start_time <= now_str,
+                Event.end_time >= now_str
             )
         )
         .order_by(Event.start_time.desc())
@@ -121,7 +125,7 @@ async def get_today_status(
         # Convert event times from UTC to Taipei time for display
         event_start_taipei = current_event.start_time.astimezone(TAIPEI_TZ)
         event_end_taipei = current_event.end_time.astimezone(TAIPEI_TZ)
-        return {
+        result = {
             "isCheckedIn": False,
             "checkInTime": None,
             "eventTitle": current_event.title,
@@ -131,13 +135,15 @@ async def get_today_status(
             "nextEventTime": None,
             "status": "waiting"
         }
+        logger.info(f"[Attendance] Returning current event response: {result}")
+        return result
 
     # No current event, find next upcoming event
     # Note: Find all upcoming events, not just user-created ones
     # Users need to attend events they're invited to, not just ones they created
     next_event_query = (
         select(Event)
-        .where(Event.start_time > now)
+        .where(Event.start_time > now_str)
         .order_by(Event.start_time.asc())
         .limit(1)
     )
@@ -150,14 +156,19 @@ async def get_today_status(
     if next_event:
         next_event_taipei = next_event.start_time.astimezone(TAIPEI_TZ)
         next_event_time_str = next_event_taipei.strftime("%H:%M")
+        logger.info(f"[Attendance] Found next event: {next_event.title} at {next_event_time_str} Taipei time")
+    else:
+        logger.info(f"[Attendance] No next event found")
 
-    return {
+    result = {
         "isCheckedIn": False,
         "checkInTime": None,
         "eventTitle": None,
         "nextEventTime": next_event_time_str,
         "status": "waiting"
     }
+    logger.info(f"[Attendance] Returning no current event response: {result}")
+    return result
 
 
 @router.post("/auto-checkin", response_model=AutoCheckInResponse)
