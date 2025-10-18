@@ -20,16 +20,22 @@ from app.models.enums import LeaveType, RequestStatus
 class LeaveRequestBase(BaseModel):
     """Base leave request schema."""
 
-    event_id: UUID = Field(..., description="Event ID for leave request")
-    leave_type: LeaveType = Field(..., description="Type of leave")
-    reason: str = Field(..., min_length=5, max_length=1000, description="Reason for leave")
-    start_time: datetime = Field(..., description="Leave start time")
-    end_time: datetime = Field(..., description="Leave end time")
+    event_id: Optional[UUID] = Field(None, description="Event ID for leave request")
+    leave_type: Optional[LeaveType] = Field(None, description="Type of leave")
+    reason: str = Field(..., min_length=1, max_length=1000, description="Reason for leave")
+    start_time: Optional[datetime] = Field(None, description="Leave start time")
+    end_time: Optional[datetime] = Field(None, description="Leave end time")
 
 
-class LeaveRequestCreate(LeaveRequestBase):
-    """Schema for creating leave request."""
-    pass
+class LeaveRequestCreate(BaseModel):
+    """Schema for creating leave request from frontend."""
+
+    startDate: str = Field(..., description="Leave start date (YYYY-MM-DD)")
+    endDate: str = Field(..., description="Leave end date (YYYY-MM-DD)")
+    type: str = Field(..., description="Leave type: full-day, morning, or afternoon")
+    reason: str = Field(..., min_length=1, max_length=1000, description="Reason for leave")
+    description: Optional[str] = Field(None, max_length=2000, description="Detailed description")
+    emergencyContact: Optional[str] = Field(None, description="Emergency contact information")
 
 
 class LeaveRequestUpdate(BaseModel):
@@ -61,13 +67,16 @@ class LeaveRequestResponse(LeaveRequestBase):
 class MakeupRequestBase(BaseModel):
     """Base makeup request schema."""
 
-    event_id: UUID = Field(..., description="Event ID for makeup request")
-    reason: str = Field(..., min_length=5, max_length=1000, description="Reason for makeup")
+    event_id: Optional[UUID] = Field(None, description="Event ID for makeup request")
+    reason: str = Field(..., min_length=1, max_length=1000, description="Reason for makeup")
 
 
-class MakeupRequestCreate(MakeupRequestBase):
-    """Schema for creating makeup request."""
-    pass
+class MakeupRequestCreate(BaseModel):
+    """Schema for creating makeup request from frontend."""
+
+    missedDate: str = Field(..., description="Missed attendance date (YYYY-MM-DD)")
+    reason: str = Field(..., min_length=1, max_length=1000, description="Reason for missing")
+    description: Optional[str] = Field(None, max_length=2000, description="Detailed description")
 
 
 class MakeupRequestUpdate(BaseModel):

@@ -101,11 +101,12 @@ export class NavigationManager {
 
   // Smart back navigation
   goBack(): void {
-    const lastValidPage = this.getLastValidPage()
-    if (lastValidPage && lastValidPage !== this.currentPage) {
-      this.safeNavigate(lastValidPage)
+    // Simple back navigation without permission checks
+    // Permission checks should only be for initial page load, not navigation
+    if (window.history.length > 1) {
+      window.history.back()
     } else {
-      this.safeNavigate('/dashboard') // Default fallback
+      window.location.href = '/dashboard'
     }
   }
 

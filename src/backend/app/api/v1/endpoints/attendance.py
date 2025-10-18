@@ -30,22 +30,75 @@ router = APIRouter()
 
 
 @router.get("/today")
-async def get_today_status(current_user: CurrentUser):
+async def get_today_status(
+    current_user: CurrentUser,
+    db: AsyncSession = Depends(get_db_session)
+):
     """Get today's attendance status for current user.
 
     Returns:
-        Simple status overview for today
+        Today's attendance status with check-in information
     """
-    from datetime import date
+    from datetime import date, datetime, time
+    from app.models.attendance.attendance import Attendance
+    from app.models.calendar.event import Event
+    from sqlalchemy import select, and_
 
     today = date.today()
 
+    # Get today's attendance records
+    today_start = datetime.combine(today, time.min)
+    today_end = datetime.combine(today, time.max)
+
+    query = (
+        select(Attendance, Event)
+        .join(Event, Attendance.event_id == Event.id)
+        .where(
+            and_(
+                Attendance.user_id == current_user.id,
+                Event.start_time >= today_start,
+                Event.start_time <= today_end
+            )
+        )
+        .order_by(Event.start_time.desc())
+        .limit(1)
+    )
+
+    result = await db.execute(query)
+    attendance_with_event = result.first()
+
+    if attendance_with_event:
+        attendance, event = attendance_with_event
+        return {
+            "isCheckedIn": True,
+            "checkInTime": attendance.check_in_time.strftime("%H:%M") if attendance.check_in_time else None,
+            "eventTitle": event.title,
+            "nextEventTime": None,
+            "status": "late" if attendance.status.value == "late" else "present"
+        }
+
+    # No check-in today, find next event
+    next_event_query = (
+        select(Event)
+        .where(
+            and_(
+                Event.creator_id == current_user.id,
+                Event.start_time > datetime.now()
+            )
+        )
+        .order_by(Event.start_time.asc())
+        .limit(1)
+    )
+
+    next_result = await db.execute(next_event_query)
+    next_event = next_result.scalar_one_or_none()
+
     return {
-        "date": today.isoformat(),
-        "user_id": str(current_user.id),
-        "user_name": current_user.name,
-        "status": "active",
-        "message": f"Today's status for {current_user.name}"
+        "isCheckedIn": False,
+        "checkInTime": None,
+        "eventTitle": None,
+        "nextEventTime": next_event.start_time.strftime("%H:%M") if next_event else None,
+        "status": "waiting"
     }
 
 
@@ -194,8 +247,57 @@ async def auto_check_in_from_calendar(
         )
 
 
+@router.get("/history")
+async def get_attendance_history(
+    current_user: CurrentUser,
+    limit: int = 10,
+    db: AsyncSession = Depends(get_db_session)
+):
+    """Get attendance history for current user.
+
+    Args:
+        current_user: Current authenticated user
+        limit: Number of records to return (default: 10, max: 100)
+        db: Database session
+
+    Returns:
+        List of attendance records with event details
+    """
+    from app.models.attendance.attendance import Attendance
+    from app.models.calendar.event import Event
+    from sqlalchemy import select
+
+    # Limit max to 100
+    limit = min(limit, 100)
+
+    query = (
+        select(Attendance, Event)
+        .join(Event, Attendance.event_id == Event.id)
+        .where(Attendance.user_id == current_user.id)
+        .order_by(Attendance.created_at.desc())
+        .limit(limit)
+    )
+
+    result = await db.execute(query)
+    records = result.all()
+
+    return [
+        {
+            "id": str(attendance.id),
+            "userId": str(attendance.user_id),
+            "eventId": str(attendance.event_id),
+            "eventTitle": event.title,
+            "status": attendance.status.value.lower(),
+            "checkedInAt": attendance.check_in_time.isoformat() if attendance.check_in_time else None,
+            "createdAt": attendance.created_at.isoformat(),
+            "updatedAt": attendance.updated_at.isoformat()
+        }
+        for attendance, event in records
+    ]
+
+
 @router.post("/checkin", response_model=CheckInResponse)
-async def manual_check_in(
+async def manual_check_in_with_event(
     checkin_request: CheckInRequest,
     current_user: CurrentUser,
     attendance_service: AttendanceServiceDep

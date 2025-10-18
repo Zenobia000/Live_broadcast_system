@@ -30,7 +30,7 @@ router = APIRouter()
 
 
 # Leave Request Endpoints
-@router.post("/leave", response_model=LeaveRequestResponse)
+@router.post("/leave")
 async def submit_leave_request(
     leave_request: LeaveRequestCreate,
     current_user: CurrentUser
@@ -42,35 +42,32 @@ async def submit_leave_request(
         current_user: Current authenticated user
 
     Returns:
-        Created leave request
+        Created leave request with simple response
 
     Raises:
         HTTPException: If request creation fails
     """
-    # TODO: Implement with proper dependency injection
-    # Validate time range
-    if leave_request.end_time <= leave_request.start_time:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="End time must be after start time"
-        )
+    from datetime import datetime as dt
+    import uuid
 
-    # Mock response for now
-    return LeaveRequestResponse(
-        id=UUID("00000000-0000-0000-0000-000000000001"),
-        user_id=current_user.id,
-        event_id=leave_request.event_id,
-        leave_type=leave_request.leave_type,
-        reason=leave_request.reason,
-        start_time=leave_request.start_time,
-        end_time=leave_request.end_time,
-        status=RequestStatus.PENDING,
-        reviewed_by=None,
-        review_note=None,
-        reviewed_at=None,
-        created_at=datetime.utcnow(),
-        updated_at=datetime.utcnow()
-    )
+    # TODO: Implement with proper dependency injection and database storage
+    # For now, return a simple response that matches frontend expectations
+
+    return {
+        "id": str(uuid.uuid4()),
+        "userId": str(current_user.id),
+        "startDate": leave_request.startDate,
+        "endDate": leave_request.endDate,
+        "type": leave_request.type,
+        "reason": leave_request.reason,
+        "description": leave_request.description,
+        "status": "pending",
+        "emergencyContact": leave_request.emergencyContact,
+        "reviewedBy": None,
+        "reviewedAt": None,
+        "createdAt": dt.utcnow().isoformat(),
+        "updatedAt": dt.utcnow().isoformat()
+    }
 
 
 @router.get("/leave/my", response_model=List[LeaveRequestResponse])
@@ -88,7 +85,7 @@ async def get_my_leave_requests(current_user: CurrentUser):
 
 
 # Makeup Request Endpoints
-@router.post("/makeup", response_model=MakeupRequestResponse)
+@router.post("/makeup")
 async def submit_makeup_request(
     makeup_request: MakeupRequestCreate,
     current_user: CurrentUser
@@ -100,25 +97,29 @@ async def submit_makeup_request(
         current_user: Current authenticated user
 
     Returns:
-        Created makeup request
+        Created makeup request with simple response
 
     Raises:
         HTTPException: If request creation fails
     """
-    # TODO: Implement with proper dependency injection
-    # Mock response for now
-    return MakeupRequestResponse(
-        id=UUID("00000000-0000-0000-0000-000000000002"),
-        user_id=current_user.id,
-        event_id=makeup_request.event_id,
-        reason=makeup_request.reason,
-        status=RequestStatus.PENDING,
-        reviewed_by=None,
-        review_note=None,
-        reviewed_at=None,
-        created_at=datetime.utcnow(),
-        updated_at=datetime.utcnow()
-    )
+    from datetime import datetime as dt
+    import uuid
+
+    # TODO: Implement with proper dependency injection and database storage
+    # For now, return a simple response that matches frontend expectations
+
+    return {
+        "id": str(uuid.uuid4()),
+        "userId": str(current_user.id),
+        "missedDate": makeup_request.missedDate,
+        "reason": makeup_request.reason,
+        "description": makeup_request.description,
+        "status": "pending",
+        "reviewedBy": None,
+        "reviewedAt": None,
+        "createdAt": dt.utcnow().isoformat(),
+        "updatedAt": dt.utcnow().isoformat()
+    }
 
 
 @router.get("/makeup/my", response_model=List[MakeupRequestResponse])
