@@ -48,7 +48,8 @@ class AttendanceService:
         4. Update attendance status
         """
         if current_time is None:
-            current_time = datetime.utcnow()
+            from datetime import timezone
+            current_time = datetime.now(timezone.utc)
 
         # Get currently ongoing events
         ongoing_events = await self.event_repository.list_ongoing_events(current_time)
@@ -91,7 +92,7 @@ class AttendanceService:
         Args:
             user_id: User ID
             event_id: Event ID
-            check_in_time: Check-in time (default: now)
+            check_in_time: Check-in time (default: now, timezone-aware)
 
         Returns:
             Updated attendance record
@@ -100,7 +101,8 @@ class AttendanceService:
             ValueError: If event not found or invalid check-in
         """
         if check_in_time is None:
-            check_in_time = datetime.utcnow()
+            from datetime import timezone
+            check_in_time = datetime.now(timezone.utc)  # Use timezone-aware datetime
 
         # Get event details
         event = await self.event_repository.get_by_id(event_id)
@@ -227,7 +229,8 @@ class AttendanceService:
         from dateutil import parser as date_parser
 
         if check_in_time is None:
-            check_in_time = datetime.utcnow()
+            from datetime import timezone
+            check_in_time = datetime.now(timezone.utc)
 
         google_event_id = calendar_event.get('id')
         if not google_event_id:
