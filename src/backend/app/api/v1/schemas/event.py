@@ -9,7 +9,6 @@ Design Philosophy:
 
 from datetime import datetime
 from typing import List, Optional
-from uuid import UUID
 
 from pydantic import BaseModel, Field
 
@@ -56,9 +55,9 @@ class EventUpdate(BaseModel):
 class EventResponse(EventBase):
     """Schema for event API responses."""
 
-    id: UUID = Field(..., description="Event ID")
+    id: int = Field(..., description="Event ID")
     google_event_id: str = Field(..., description="Google Calendar event ID")
-    created_by: Optional[UUID] = Field(None, description="Creator user ID")
+    created_by: Optional[int] = Field(None, description="Creator user ID")
     created_at: datetime = Field(..., description="Event creation time")
     updated_at: datetime = Field(..., description="Event last update time")
 

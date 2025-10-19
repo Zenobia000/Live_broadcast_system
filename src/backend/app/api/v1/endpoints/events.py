@@ -9,7 +9,6 @@ Design Philosophy:
 
 from datetime import datetime, timedelta
 from typing import List
-from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from google.oauth2.credentials import Credentials
@@ -17,7 +16,7 @@ from google.oauth2.credentials import Credentials
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.dependencies.auth import AdminUser, CurrentUser
-from app.api.dependencies.database import get_db
+from app.core.database import get_session as get_db_session
 from app.api.v1.schemas.event import (
     EventCreate,
     EventResponse,
@@ -88,7 +87,7 @@ async def sync_events_from_google(sync_request: EventSyncRequest):
 
 @router.get("/{event_id}", response_model=EventResponse)
 async def get_event(
-    event_id: UUID,
+    event_id: int,
     current_user: CurrentUser
 ):
     """Get specific event details.
@@ -109,7 +108,7 @@ async def get_event(
 
 @router.get("/{event_id}/attendance", response_model=EventWithAttendance)
 async def get_event_with_attendance(
-    event_id: UUID,
+    event_id: int,
     admin_user: AdminUser
 ):
     """Get event with attendance statistics (admin only).
@@ -132,7 +131,7 @@ async def get_event_with_attendance(
 async def create_manual_event(
     event_create: EventCreate,
     current_user: CurrentUser,
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db_session)
 ):
     """Create manual event with participants.
 
@@ -191,7 +190,7 @@ async def create_manual_event(
 
 @router.put("/{event_id}", response_model=EventResponse, dependencies=[Depends(AdminUser)])
 async def update_event(
-    event_id: UUID,
+    event_id: int,
     event_update: EventUpdate,
     admin_user: AdminUser
 ):
@@ -214,7 +213,7 @@ async def update_event(
 
 @router.delete("/{event_id}", dependencies=[Depends(AdminUser)])
 async def delete_event(
-    event_id: UUID,
+    event_id: int,
     admin_user: AdminUser
 ):
     """Delete event (admin only).
