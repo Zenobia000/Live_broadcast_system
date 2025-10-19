@@ -110,9 +110,9 @@ export const router = createBrowserRouter([
   {
     path: '/create-event',
     element: (
-      <AdminRoute>
+      <ProtectedRoute>
         <CreateEventPage />
-      </AdminRoute>
+      </ProtectedRoute>
     ),
   },
   {

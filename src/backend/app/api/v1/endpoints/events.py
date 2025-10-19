@@ -137,7 +137,7 @@ async def create_manual_event(
 
     Args:
         event_create: Event creation data (includes participant_ids)
-        current_user: Current authenticated user (must be admin for creating events)
+        current_user: Current authenticated user (any logged-in user can create events)
         db: Database session
 
     Returns:
@@ -146,12 +146,7 @@ async def create_manual_event(
     Raises:
         HTTPException: If validation fails or participants are invalid
     """
-    # Check if user is admin (only admins can create events)
-    if not current_user.is_admin:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Only administrators can create events"
-        )
+    # All authenticated users can create events
 
     try:
         event_service = EventService(db)

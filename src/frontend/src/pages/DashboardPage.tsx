@@ -368,26 +368,24 @@ const DashboardPage: React.FC = () => {
           </CardBody>
         </Card>
 
-        {userRole === 'admin' && (
-          <>
-            <Card className="hover:shadow-lg transition-shadow cursor-pointer"
-                  onClick={() => window.location.href = '/create-event'}>
-              <CardBody className="text-center">
-                <div className="text-4xl mb-3">✨</div>
-                <h3 className="font-semibold text-gray-900 dark:text-white">創建會議</h3>
-                <p className="text-sm text-gray-500 mt-1">新增簽到事件</p>
-              </CardBody>
-            </Card>
+        <Card className="hover:shadow-lg transition-shadow cursor-pointer"
+              onClick={() => window.location.href = '/create-event'}>
+          <CardBody className="text-center">
+            <div className="text-4xl mb-3">✨</div>
+            <h3 className="font-semibold text-gray-900 dark:text-white">創建會議</h3>
+            <p className="text-sm text-gray-500 mt-1">新增簽到事件</p>
+          </CardBody>
+        </Card>
 
-            <Card className="hover:shadow-lg transition-shadow cursor-pointer"
-                  onClick={() => window.location.href = '/admin'}>
-              <CardBody className="text-center">
-                <div className="text-4xl mb-3">👥</div>
-                <h3 className="font-semibold text-gray-900 dark:text-white">審核管理</h3>
-                <p className="text-sm text-gray-500 mt-1">處理團隊申請</p>
-              </CardBody>
-            </Card>
-          </>
+        {userRole === 'admin' && (
+          <Card className="hover:shadow-lg transition-shadow cursor-pointer"
+                onClick={() => window.location.href = '/admin'}>
+            <CardBody className="text-center">
+              <div className="text-4xl mb-3">👥</div>
+              <h3 className="font-semibold text-gray-900 dark:text-white">審核管理</h3>
+              <p className="text-sm text-gray-500 mt-1">處理團隊申請</p>
+            </CardBody>
+          </Card>
         )}
       </div>
     )

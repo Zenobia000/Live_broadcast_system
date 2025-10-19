@@ -104,9 +104,6 @@ const CreateEventPage: React.FC = () => {
             <h1 className="text-xl font-semibold text-gray-900 dark:text-white">
               創建會議
             </h1>
-            <div className="ml-auto text-sm text-gray-500">
-              管理功能
-            </div>
           </div>
         </div>
       </header>
