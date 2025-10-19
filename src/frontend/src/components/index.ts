@@ -25,3 +25,6 @@ export type { ToastProps, ToastType, ToastAction, ToastContainerProps } from './
 
 // Attendance Components
 export { default as AttendanceHeatmap } from './AttendanceHeatmap'
+
+// Event Components
+export { default as UserSelector } from './UserSelector'

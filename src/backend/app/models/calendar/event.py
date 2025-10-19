@@ -21,6 +21,7 @@ if TYPE_CHECKING:
     from app.models.attendance.leave_request import LeaveRequest
     from app.models.attendance.makeup_request import MakeupRequest
     from app.models.auth.user import User
+    from app.models.calendar.event_participant import EventParticipant
 
 
 class Event(Base, UUIDMixin, TimestampMixin):
@@ -132,6 +133,14 @@ class Event(Base, UUIDMixin, TimestampMixin):
         "MakeupRequest",
         back_populates="event",
         foreign_keys="MakeupRequest.event_id",
+        lazy="select",
+        cascade="all, delete-orphan"
+    )
+
+    participants: Mapped[List["EventParticipant"]] = relationship(
+        "EventParticipant",
+        back_populates="event",
+        foreign_keys="EventParticipant.event_id",
         lazy="select",
         cascade="all, delete-orphan"
     )

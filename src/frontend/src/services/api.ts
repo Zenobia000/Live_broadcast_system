@@ -70,6 +70,28 @@ export interface MakeupRequest {
   updatedAt: string
 }
 
+export interface Event {
+  id: string
+  title: string
+  description?: string
+  startTime: string
+  endTime: string
+  gracePeriodMinutes: number
+  googleEventId: string
+  createdBy?: string
+  createdAt: string
+  updatedAt: string
+}
+
+export interface CreateEventData {
+  title: string
+  description?: string
+  startTime: string
+  endTime: string
+  gracePeriodMinutes?: number
+  participantIds: number[]
+}
+
 // API Client Class
 class ApiClient {
   private client: AxiosInstance
@@ -294,6 +316,24 @@ class ApiClient {
     return response.data
   }
 
+  // Event Creation APIs
+  async createEvent(data: CreateEventData): Promise<ApiResponse<Event>> {
+    const response = await this.client.post('/events', {
+      title: data.title,
+      description: data.description,
+      start_time: data.startTime,
+      end_time: data.endTime,
+      grace_period_minutes: data.gracePeriodMinutes || 5,
+      participant_ids: data.participantIds
+    })
+    return response.data
+  }
+
+  async getAllUsers(): Promise<ApiResponse<User[]>> {
+    const response = await this.client.get('/users')
+    return response.data
+  }
+
   // Leave Request APIs
   async submitLeaveRequest(data: {
     startDate: string
@@ -388,6 +428,10 @@ export const api = {
   getCalendarEvents: (daysAhead?: number) => apiClient.getCalendarEvents(daysAhead),
   getTodayCalendarEvents: () => apiClient.getTodayCalendarEvents(),
   getCheckInStatus: () => apiClient.getCheckInStatus(),
+
+  // Event Creation
+  createEvent: (data: CreateEventData) => apiClient.createEvent(data),
+  getAllUsers: () => apiClient.getAllUsers(),
 
   // Leave Requests
   submitLeaveRequest: (data: Parameters<typeof apiClient.submitLeaveRequest>[0]) =>

@@ -37,6 +37,10 @@ class EventCreate(EventBase):
         max_length=255,
         description="Google Calendar event ID (for synced events)"
     )
+    participant_ids: List[int] = Field(
+        default_factory=list,
+        description="List of user IDs to invite to this event"
+    )
 
 
 class EventUpdate(BaseModel):

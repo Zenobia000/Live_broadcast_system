@@ -14,7 +14,10 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException, status
 from google.oauth2.credentials import Credentials
 
+from sqlalchemy.ext.asyncio import AsyncSession
+
 from app.api.dependencies.auth import AdminUser, CurrentUser
+from app.api.dependencies.database import get_db
 from app.api.v1.schemas.event import (
     EventCreate,
     EventResponse,
@@ -24,6 +27,7 @@ from app.api.v1.schemas.event import (
     EventWithAttendance,
     UpcomingEventsResponse,
 )
+from app.services.calendar.event_service import EventService
 
 router = APIRouter()
 
@@ -124,40 +128,65 @@ async def get_event_with_attendance(
     )
 
 
-@router.post("/", response_model=EventResponse, dependencies=[Depends(AdminUser)])
+@router.post("/", response_model=EventResponse)
 async def create_manual_event(
     event_create: EventCreate,
-    admin_user: AdminUser
+    current_user: CurrentUser,
+    db: AsyncSession = Depends(get_db)
 ):
-    """Create manual event (admin only).
+    """Create manual event with participants.
 
     Args:
-        event_create: Event creation data
-        admin_user: Current admin user
+        event_create: Event creation data (includes participant_ids)
+        current_user: Current authenticated user (must be admin for creating events)
+        db: Database session
 
     Returns:
         Created event
+
+    Raises:
+        HTTPException: If validation fails or participants are invalid
     """
-    # TODO: Implement with proper dependency injection
-    if event_create.end_time <= event_create.start_time:
+    # Check if user is admin (only admins can create events)
+    if not current_user.is_admin:
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="End time must be after start time"
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only administrators can create events"
         )
 
-    # Mock response for now
-    return EventResponse(
-        id=UUID("00000000-0000-0000-0000-000000000000"),
-        title=event_create.title,
-        description=event_create.description,
-        start_time=event_create.start_time,
-        end_time=event_create.end_time,
-        grace_period_minutes=event_create.grace_period_minutes,
-        google_event_id=event_create.google_event_id or f"manual_{datetime.utcnow().isoformat()}",
-        created_by=admin_user.id,
-        created_at=datetime.utcnow(),
-        updated_at=datetime.utcnow()
-    )
+    try:
+        event_service = EventService(db)
+        event = await event_service.create_event_with_participants(
+            title=event_create.title,
+            start_time=event_create.start_time,
+            end_time=event_create.end_time,
+            created_by=current_user.id,
+            participant_ids=event_create.participant_ids,
+            description=event_create.description,
+            grace_period_minutes=event_create.grace_period_minutes,
+            google_event_id=event_create.google_event_id
+        )
+
+        # TODO: Trigger notification service to send invitations to participants
+        # This will be implemented in the next phase
+
+        return EventResponse(
+            id=event.id,
+            title=event.title,
+            description=event.description,
+            start_time=event.start_time,
+            end_time=event.end_time,
+            grace_period_minutes=event.grace_period_minutes,
+            google_event_id=event.google_event_id,
+            created_by=event.created_by,
+            created_at=event.created_at,
+            updated_at=event.updated_at
+        )
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e)
+        )
 
 
 @router.put("/{event_id}", response_model=EventResponse, dependencies=[Depends(AdminUser)])

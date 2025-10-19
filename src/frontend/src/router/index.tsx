@@ -9,6 +9,7 @@ const DashboardPage = React.lazy(() => import('../pages/DashboardPage'))
 const LeavePage = React.lazy(() => import('../pages/LeavePage'))
 const MakeupPage = React.lazy(() => import('../pages/MakeupPage'))
 const AdminPage = React.lazy(() => import('../pages/AdminPage'))
+const CreateEventPage = React.lazy(() => import('../pages/CreateEventPage'))
 const ProfilePage = React.lazy(() => import('../pages/ProfilePage'))
 const StatusPage = React.lazy(() => import('../pages/StatusPage'))
 
@@ -103,6 +104,14 @@ export const router = createBrowserRouter([
     element: (
       <AdminRoute>
         <AdminPage />
+      </AdminRoute>
+    ),
+  },
+  {
+    path: '/create-event',
+    element: (
+      <AdminRoute>
+        <CreateEventPage />
       </AdminRoute>
     ),
   },
