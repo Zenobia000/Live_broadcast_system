@@ -369,19 +369,25 @@ const DashboardPage: React.FC = () => {
         </Card>
 
         {userRole === 'admin' && (
-          <Card className="hover:shadow-lg transition-shadow cursor-pointer col-span-2"
-                onClick={() => window.location.href = '/admin'}>
-            <CardBody className="text-center">
-              <div className="flex items-center justify-center gap-3">
-                <div className="text-2xl">👥</div>
-                <div>
-                  <h3 className="font-semibold text-gray-900 dark:text-white">審核管理</h3>
-                  <p className="text-sm text-gray-500">處理團隊申請</p>
-                </div>
-                {/* Notification badge would go here */}
-              </div>
-            </CardBody>
-          </Card>
+          <>
+            <Card className="hover:shadow-lg transition-shadow cursor-pointer"
+                  onClick={() => window.location.href = '/create-event'}>
+              <CardBody className="text-center">
+                <div className="text-4xl mb-3">✨</div>
+                <h3 className="font-semibold text-gray-900 dark:text-white">創建會議</h3>
+                <p className="text-sm text-gray-500 mt-1">新增簽到事件</p>
+              </CardBody>
+            </Card>
+
+            <Card className="hover:shadow-lg transition-shadow cursor-pointer"
+                  onClick={() => window.location.href = '/admin'}>
+              <CardBody className="text-center">
+                <div className="text-4xl mb-3">👥</div>
+                <h3 className="font-semibold text-gray-900 dark:text-white">審核管理</h3>
+                <p className="text-sm text-gray-500 mt-1">處理團隊申請</p>
+              </CardBody>
+            </Card>
+          </>
         )}
       </div>
     )

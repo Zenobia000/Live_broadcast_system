@@ -322,14 +322,23 @@ const AdminPage: React.FC = () => {
               </h1>
             </div>
 
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={loadPendingRequests}
-              disabled={loading}
-            >
-              {loading ? <LoadingSpinner size="sm" /> : '🔄 重新整理'}
-            </Button>
+            <div className="flex gap-2">
+              <Button
+                variant="primary"
+                size="sm"
+                onClick={() => window.location.href = '/create-event'}
+              >
+                ✨ 創建會議
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={loadPendingRequests}
+                disabled={loading}
+              >
+                {loading ? <LoadingSpinner size="sm" /> : '🔄 重新整理'}
+              </Button>
+            </div>
           </div>
 
           <div className="mt-4">
