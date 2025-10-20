@@ -85,7 +85,7 @@ async def get_today_status(
             "status": "late" if attendance.status == "late" else "present"
         }
 
-    # No check-in today, first check for CURRENT ongoing events
+    # No check-in today, first check for CURRENT or UPCOMING events (within early check-in window)
     now = now_utc  # Use the UTC time we already calculated
 
     # Debug logging
@@ -93,18 +93,27 @@ async def get_today_status(
     logger = logging.getLogger(__name__)
     logger.info(f"[Attendance] Checking for ongoing events at UTC: {now.isoformat()}")
 
+    # Allow check-in before event start time (configurable, default 15 minutes)
+    from app.core.config import settings
+    EARLY_CHECKIN_MINUTES = settings.EARLY_CHECKIN_MINUTES
+    early_checkin_time = now + timedelta(minutes=EARLY_CHECKIN_MINUTES)
+
     # Use datetime object directly for PostgreSQL compatibility
     logger.info(f"[Attendance] Query parameter: {now}")
+    logger.info(f"[Attendance] Early check-in window: {early_checkin_time.isoformat()}")
 
+    # Find events that:
+    # 1. Start within 15 minutes from now (early check-in window)
+    # 2. OR already started and not yet ended (ongoing events)
     current_event_query = (
         select(Event)
         .where(
             and_(
-                Event.start_time <= now,
-                Event.end_time >= now
+                Event.start_time <= early_checkin_time,  # Allow 15 min early check-in
+                Event.end_time >= now  # Event hasn't ended yet
             )
         )
-        .order_by(Event.start_time.desc())
+        .order_by(Event.start_time.asc())  # Get the earliest upcoming/ongoing event
         .limit(1)
     )
 
@@ -137,12 +146,12 @@ async def get_today_status(
         logger.info(f"[Attendance] Returning current event response: {result}")
         return result
 
-    # No current event, find next upcoming event
+    # No current event, find next upcoming event (outside the 15-min early check-in window)
     # Note: Find all upcoming events, not just user-created ones
     # Users need to attend events they're invited to, not just ones they created
     next_event_query = (
         select(Event)
-        .where(Event.start_time > now)
+        .where(Event.start_time > early_checkin_time)  # Beyond the early check-in window
         .order_by(Event.start_time.asc())
         .limit(1)
     )

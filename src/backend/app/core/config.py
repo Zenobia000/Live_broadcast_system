@@ -100,6 +100,12 @@ class Settings(BaseSettings):
         description="Slack webhook URL for notifications"
     )
 
+    # Attendance Settings
+    EARLY_CHECKIN_MINUTES: int = Field(
+        default=15,
+        description="Number of minutes before event start that users can check in"
+    )
+
     class Config:
         env_file = ".env"
         case_sensitive = True
