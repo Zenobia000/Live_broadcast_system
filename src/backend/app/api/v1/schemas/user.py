@@ -77,3 +77,26 @@ class RoleUpdate(BaseModel):
     """Schema for updating user role (admin only)."""
 
     role: UserRole = Field(..., description="New user role")
+
+
+class UserRegisterRequest(BaseModel):
+    """Schema for user registration with username/password."""
+
+    name: str = Field(..., min_length=1, max_length=100, description="User display name")
+    email: EmailStr = Field(..., description="User email address")
+    password: str = Field(..., min_length=8, max_length=100, description="User password (min 8 characters)")
+
+
+class UserLoginRequest(BaseModel):
+    """Schema for user login with username/password."""
+
+    email: EmailStr = Field(..., description="User email address")
+    password: str = Field(..., description="User password")
+
+
+class AuthResponse(BaseModel):
+    """Schema for authentication response."""
+
+    access_token: str = Field(..., description="JWT access token")
+    token_type: str = Field(default="bearer", description="Token type")
+    user: UserProfile = Field(..., description="User profile information")

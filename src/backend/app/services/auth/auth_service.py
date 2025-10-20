@@ -14,6 +14,7 @@ from app.models.auth.user import User
 from app.models.enums import UserRole
 from app.services.auth.jwt_service import JWTService
 from app.services.auth.oauth_service import GoogleOAuthService
+from app.services.auth.password_service import password_service
 from app.services.auth.user_service import UserService
 
 logger = logging.getLogger(__name__)
@@ -166,3 +167,91 @@ class AuthService:
             email=user.email,
             role=user.role
         )
+
+    async def register_user_with_password(
+        self,
+        name: str,
+        email: str,
+        password: str
+    ) -> Tuple[User, str]:
+        """Register a new user with username/password.
+
+        Args:
+            name: User display name
+            email: User email address
+            password: Plain text password
+
+        Returns:
+            Tuple of (user, access_token)
+
+        Raises:
+            ValueError: If email already exists or password is weak
+        """
+        # Validate password strength
+        is_valid, error_message = password_service.validate_password_strength(password)
+        if not is_valid:
+            raise ValueError(error_message)
+
+        # Check if user already exists
+        existing_user = await self.user_service.get_user_by_email(email)
+        if existing_user:
+            raise ValueError("Email already registered")
+
+        # Hash password
+        password_hash = password_service.hash_password(password)
+
+        # Create user
+        logger.info(f"[Auth] Creating new user with password: {email}")
+        user = await self.user_service.create_user(
+            email=email,
+            name=name,
+            google_id=None,  # No Google ID for password users
+            password_hash=password_hash,
+            avatar_url=None,
+            role=UserRole.MEMBER
+        )
+        logger.info(f"[Auth] User created successfully: {user.id}")
+
+        # Generate JWT token
+        access_token = self.create_token_for_user(user)
+        logger.info(f"[Auth] JWT token generated for new user")
+
+        return user, access_token
+
+    async def authenticate_with_password(
+        self,
+        email: str,
+        password: str
+    ) -> Tuple[User, str]:
+        """Authenticate user with email/password.
+
+        Args:
+            email: User email address
+            password: Plain text password
+
+        Returns:
+            Tuple of (user, access_token)
+
+        Raises:
+            ValueError: If credentials are invalid
+        """
+        # Get user by email
+        user = await self.user_service.get_user_by_email(email)
+        if not user:
+            raise ValueError("Invalid email or password")
+
+        # Check if user has password hash (not OAuth-only user)
+        if not user.password_hash:
+            raise ValueError("This account uses Google login. Please sign in with Google.")
+
+        # Verify password
+        is_valid = password_service.verify_password(password, user.password_hash)
+        if not is_valid:
+            raise ValueError("Invalid email or password")
+
+        logger.info(f"[Auth] Password authentication successful for user: {user.id}")
+
+        # Generate JWT token
+        access_token = self.create_token_for_user(user)
+
+        return user, access_token

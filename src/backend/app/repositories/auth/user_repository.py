@@ -25,15 +25,17 @@ class UserRepository:
     async def create(
         self,
         email: str,
-        google_id: str,
         name: str,
+        google_id: Optional[str] = None,
+        password_hash: Optional[str] = None,
         avatar_url: Optional[str] = None,
         role: UserRole = UserRole.MEMBER
     ) -> User:
-        """Create a new user."""
+        """Create a new user (OAuth or password-based)."""
         user = User(
             email=email,
             google_id=google_id,
+            password_hash=password_hash,
             name=name,
             avatar_url=avatar_url,
             role=role

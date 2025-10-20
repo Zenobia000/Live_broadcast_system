@@ -23,8 +23,9 @@ class UserService:
     async def create_user(
         self,
         email: str,
-        google_id: str,
         name: str,
+        google_id: Optional[str] = None,
+        password_hash: Optional[str] = None,
         avatar_url: Optional[str] = None,
         role: UserRole = UserRole.MEMBER
     ) -> User:
@@ -32,8 +33,9 @@ class UserService:
 
         Args:
             email: User's email address
-            google_id: Google OAuth user ID
             name: User's display name
+            google_id: Google OAuth user ID (for OAuth users)
+            password_hash: Bcrypt password hash (for password users)
             avatar_url: User's avatar URL
             role: User role (default: MEMBER)
 
@@ -41,18 +43,23 @@ class UserService:
             Created user
 
         Raises:
-            ValueError: If user already exists
+            ValueError: If user already exists or invalid parameters
         """
+        # Validate that user has either Google ID or password
+        if not google_id and not password_hash:
+            raise ValueError("User must have either google_id or password_hash")
+
         # Check if user already exists
         if await self.user_repository.exists_by_email(email):
             raise ValueError(f"User with email {email} already exists")
 
-        if await self.user_repository.exists_by_google_id(google_id):
+        if google_id and await self.user_repository.exists_by_google_id(google_id):
             raise ValueError(f"User with Google ID {google_id} already exists")
 
         return await self.user_repository.create(
             email=email,
             google_id=google_id,
+            password_hash=password_hash,
             name=name,
             avatar_url=avatar_url,
             role=role

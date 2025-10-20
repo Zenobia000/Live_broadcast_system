@@ -12,10 +12,101 @@ from typing import Dict
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 
 from app.api.dependencies.auth import AdminUser, AuthService, CurrentUser
-from app.api.v1.schemas.user import CurrentUser as CurrentUserSchema
-from app.api.v1.schemas.user import RoleUpdate, UserProfile, UserResponse
+from app.api.v1.schemas.user import (
+    AuthResponse,
+    CurrentUser as CurrentUserSchema,
+    RoleUpdate,
+    UserLoginRequest,
+    UserProfile,
+    UserRegisterRequest,
+    UserResponse,
+)
 
 router = APIRouter()
+
+
+@router.post("/register", response_model=AuthResponse, status_code=status.HTTP_201_CREATED)
+async def register(
+    request_data: UserRegisterRequest,
+    auth_service: AuthService
+):
+    """Register a new user with email/password.
+
+    Args:
+        request_data: User registration data
+        auth_service: Authentication service
+
+    Returns:
+        Authentication response with access token and user profile
+
+    Raises:
+        HTTPException: If email already exists or password is weak
+    """
+    try:
+        user, access_token = await auth_service.register_user_with_password(
+            name=request_data.name,
+            email=request_data.email,
+            password=request_data.password
+        )
+
+        return AuthResponse(
+            access_token=access_token,
+            token_type="bearer",
+            user=UserProfile.model_validate(user)
+        )
+
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e)
+        )
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Registration failed: {str(e)}"
+        )
+
+
+@router.post("/login", response_model=AuthResponse)
+async def login(
+    request_data: UserLoginRequest,
+    auth_service: AuthService
+):
+    """Login with email/password.
+
+    Args:
+        request_data: User login credentials
+        auth_service: Authentication service
+
+    Returns:
+        Authentication response with access token and user profile
+
+    Raises:
+        HTTPException: If credentials are invalid
+    """
+    try:
+        user, access_token = await auth_service.authenticate_with_password(
+            email=request_data.email,
+            password=request_data.password
+        )
+
+        return AuthResponse(
+            access_token=access_token,
+            token_type="bearer",
+            user=UserProfile.model_validate(user)
+        )
+
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=str(e),
+            headers={"WWW-Authenticate": "Bearer"}
+        )
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Login failed: {str(e)}"
+        )
 
 
 @router.get("/login/google")

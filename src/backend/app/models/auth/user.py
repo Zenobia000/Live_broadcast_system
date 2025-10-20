@@ -2,9 +2,10 @@
 User model for authentication and authorization.
 
 Design Philosophy:
-- 100% Google OAuth 2.0 authentication (no password storage)
+- Dual authentication: Google OAuth 2.0 OR username/password
 - Role-based access control (RBAC) with UserRole enum
 - Immutable user records (no soft delete - users are historical facts)
+- Password hashing with bcrypt for security
 """
 
 from datetime import datetime
@@ -25,7 +26,7 @@ if TYPE_CHECKING:
 
 
 class User(Base, UUIDMixin, TimestampMixin):
-    """User model for authentication via Google OAuth 2.0.
+    """User model supporting both Google OAuth 2.0 and username/password authentication.
 
     Relationships:
     - created_events: Events created by this user (nullable - system events have no creator)
@@ -36,30 +37,40 @@ class User(Base, UUIDMixin, TimestampMixin):
     - reviewed_makeup_requests: Makeup requests reviewed by this user (admin only)
 
     Design Decisions:
-    - No password field (100% OAuth)
-    - Email and google_id both unique (support account linking)
+    - Dual auth: Google OAuth OR username/password
+    - Email unique (primary identifier)
+    - google_id nullable (only for OAuth users)
+    - password_hash nullable (only for password users)
     - Role as ENUM (extensible to MODERATOR, etc.)
     - No soft delete (users are immutable historical facts)
     """
 
     __tablename__ = "users"
-    __table_args__ = {"comment": "User accounts authenticated via Google OAuth 2.0"}
+    __table_args__ = {"comment": "User accounts with Google OAuth 2.0 or username/password authentication"}
 
-    # Authentication Fields (Google OAuth 2.0)
+    # Authentication Fields (Dual: OAuth or Password)
     email: Mapped[str] = mapped_column(
         String(255),
         unique=True,
         nullable=False,
         index=True,
-        comment="Google OAuth email address (unique identifier)"
+        comment="Email address (unique identifier for both OAuth and password users)"
     )
 
-    google_id: Mapped[str] = mapped_column(
+    # Google OAuth Fields (nullable - only for OAuth users)
+    google_id: Mapped[Optional[str]] = mapped_column(
         String(255),
         unique=True,
-        nullable=False,
+        nullable=True,
         index=True,
-        comment="Google OAuth user ID (sub claim from JWT)"
+        comment="Google OAuth user ID (sub claim from JWT) - NULL for password users"
+    )
+
+    # Password Authentication Fields (nullable - only for password users)
+    password_hash: Mapped[Optional[str]] = mapped_column(
+        String(255),
+        nullable=True,
+        comment="Bcrypt password hash - NULL for OAuth users"
     )
 
     # Profile Fields
