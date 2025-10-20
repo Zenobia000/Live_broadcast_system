@@ -155,10 +155,19 @@ async def get_today_status(
     # Find events that:
     # 1. Start within 15 minutes from now (early check-in window)
     # 2. OR already started and not yet ended (ongoing events)
+    # 3. User hasn't checked in yet
+
+    # Subquery to get events user has already checked in to
+    attended_events_subquery = (
+        select(Attendance.event_id)
+        .where(Attendance.user_id == current_user.id)
+    )
+
     current_event_query = (
         select(Event)
         .where(
             and_(
+                Event.id.not_in(attended_events_subquery),  # Not already checked in
                 Event.start_time <= early_checkin_time,  # Allow 15 min early check-in
                 Event.end_time >= now  # Event hasn't ended yet
             )
