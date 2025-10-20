@@ -7,12 +7,16 @@ Design Philosophy:
 - Profile update functionality
 """
 
-from typing import Optional
+from typing import List, Optional
 
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, EmailStr
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.dependencies.auth import CurrentUser
+from app.core.database import get_session as get_db_session
+from app.models.auth.user import User
 
 router = APIRouter()
 
@@ -83,4 +87,36 @@ async def update_current_user(
             "updatedAt": current_user.updated_at.isoformat()
         },
         "message": "Profile update functionality will be fully implemented in next phase"
+    }
+
+
+@router.get("", response_model=dict)
+async def get_all_users(
+    db: AsyncSession = Depends(get_db_session),
+    current_user: CurrentUser = None
+):
+    """Get all users in the system.
+
+    This endpoint is used for selecting participants when creating events.
+
+    Returns:
+        List of all users
+    """
+    result = await db.execute(select(User))
+    users = result.scalars().all()
+
+    return {
+        "success": True,
+        "data": [
+            {
+                "id": str(user.id),
+                "email": user.email,
+                "name": user.name,
+                "avatar": user.avatar_url,
+                "role": user.role.value if hasattr(user.role, 'value') else str(user.role),
+                "createdAt": user.created_at.isoformat(),
+                "updatedAt": user.updated_at.isoformat()
+            }
+            for user in users
+        ]
     }
