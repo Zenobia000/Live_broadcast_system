@@ -93,16 +93,15 @@ async def get_today_status(
     logger = logging.getLogger(__name__)
     logger.info(f"[Attendance] Checking for ongoing events at UTC: {now.isoformat()}")
 
-    # Convert datetime to string with timezone for SQLite compatibility
-    now_str = now.isoformat()
-    logger.info(f"[Attendance] Query parameter: {now_str}")
+    # Use datetime object directly for PostgreSQL compatibility
+    logger.info(f"[Attendance] Query parameter: {now}")
 
     current_event_query = (
         select(Event)
         .where(
             and_(
-                Event.start_time <= now_str,
-                Event.end_time >= now_str
+                Event.start_time <= now,
+                Event.end_time >= now
             )
         )
         .order_by(Event.start_time.desc())
@@ -143,7 +142,7 @@ async def get_today_status(
     # Users need to attend events they're invited to, not just ones they created
     next_event_query = (
         select(Event)
-        .where(Event.start_time > now_str)
+        .where(Event.start_time > now)
         .order_by(Event.start_time.asc())
         .limit(1)
     )
@@ -391,18 +390,17 @@ async def quick_check_in(
         # Use timezone-aware datetime for proper comparison
         from datetime import timezone
         now = datetime.now(timezone.utc)
-        now_str = now.isoformat()  # Convert to ISO string for SQLite compatibility
 
         import logging
         logger = logging.getLogger(__name__)
-        logger.info(f"[Quick Check-in] Looking for ongoing event at {now_str}")
+        logger.info(f"[Quick Check-in] Looking for ongoing event at {now.isoformat()}")
 
         query = (
             select(Event)
             .where(
                 and_(
-                    Event.start_time <= now_str,
-                    Event.end_time >= now_str
+                    Event.start_time <= now,
+                    Event.end_time >= now
                 )
             )
             .order_by(Event.start_time.desc())
