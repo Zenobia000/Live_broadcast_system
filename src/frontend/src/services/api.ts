@@ -198,6 +198,19 @@ class ApiClient {
   }
 
   // Authentication APIs
+
+  // Username/Password Authentication
+  async register(data: { name: string; email: string; password: string }): Promise<ApiResponse<{ access_token: string; token_type: string; user: User }>> {
+    const response = await this.client.post('/auth/register', data)
+    return response.data
+  }
+
+  async login(data: { email: string; password: string }): Promise<ApiResponse<{ access_token: string; token_type: string; user: User }>> {
+    const response = await this.client.post('/auth/login', data)
+    return response.data
+  }
+
+  // Google OAuth Authentication
   async getGoogleAuthUrl(): Promise<{ authorization_url: string; state: string }> {
     const response = await this.client.get('/auth/login/google')
     // Response is wrapped in ApiResponse format by interceptor
@@ -410,6 +423,8 @@ export const apiClient = new ApiClient()
 // Convenience functions
 export const api = {
   // Auth
+  register: (data: { name: string; email: string; password: string }) => apiClient.register(data),
+  login: (data: { email: string; password: string }) => apiClient.login(data),
   getGoogleAuthUrl: () => apiClient.getGoogleAuthUrl(),
   googleAuth: (authCode: string) => apiClient.googleAuth(authCode),
   logout: () => apiClient.logout(),
