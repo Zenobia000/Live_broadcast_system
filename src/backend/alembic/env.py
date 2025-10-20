@@ -38,10 +38,17 @@ target_metadata = Base.metadata
 # Override sqlalchemy.url with environment variable
 database_url = os.getenv("DATABASE_URL")
 if database_url:
-    # Convert async SQLite URL to sync for Alembic migrations
-    # aiosqlite is async, but Alembic runs sync migrations
-    if "sqlite+aiosqlite" in database_url:
+    # Convert async database URLs to sync for Alembic migrations
+    # Alembic runs synchronous migrations, so we need sync drivers
+
+    # Convert asyncpg (async PostgreSQL) to psycopg2 (sync PostgreSQL)
+    if "postgresql+asyncpg" in database_url:
+        database_url = database_url.replace("postgresql+asyncpg", "postgresql+psycopg2")
+
+    # Convert aiosqlite (async SQLite) to sqlite (sync SQLite)
+    elif "sqlite+aiosqlite" in database_url:
         database_url = database_url.replace("sqlite+aiosqlite", "sqlite")
+
     config.set_main_option("sqlalchemy.url", database_url)
 
 # other values from the config, defined by the needs of env.py,
