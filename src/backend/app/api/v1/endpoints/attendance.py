@@ -7,7 +7,7 @@ Design Philosophy:
 - Role-based access control for management features
 """
 
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import List, Optional
 from uuid import UUID
 
@@ -445,7 +445,9 @@ async def quick_check_in(
             check_in_time=None  # Use current time
         )
 
-        was_late = attendance.status.value == "LATE"
+        # Get status value - handle both enum and string
+        status_value = attendance.status.value if hasattr(attendance.status, 'value') else str(attendance.status)
+        was_late = status_value.upper() == "LATE"
 
         return {
             "success": True,
@@ -454,7 +456,7 @@ async def quick_check_in(
                 "userId": str(attendance.user_id),
                 "eventId": str(attendance.event_id),
                 "eventTitle": current_event.title,
-                "status": attendance.status.value.lower(),
+                "status": status_value.lower(),
                 "checkInTime": attendance.check_in_time.isoformat() if attendance.check_in_time else None,
                 "wasLate": was_late,
                 "message": f"成功簽到：{current_event.title}" + (" (遲到)" if was_late else "")
