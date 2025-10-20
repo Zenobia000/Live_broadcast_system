@@ -13,15 +13,20 @@ const TAIPEI_OFFSET_HOURS = 8
 /**
  * Convert local datetime input (YYYY-MM-DD HH:mm) to UTC ISO string for API
  * User input is assumed to be in Taipei timezone (UTC+8)
+ *
+ * IMPORTANT: This function treats the input time as Taipei time (UTC+8)
+ * and converts it to UTC for backend storage.
  */
 export function localToUTC(dateString: string, timeString: string): string {
-  // Create a date object from the local input
-  const localDateTime = new Date(`${dateString}T${timeString}:00`)
+  // Parse the date and time components
+  const [year, month, day] = dateString.split('-').map(Number)
+  const [hours, minutes] = timeString.split(':').map(Number)
 
-  // Subtract 8 hours to convert Taipei time to UTC
-  const utcDateTime = new Date(localDateTime.getTime() - TAIPEI_OFFSET_HOURS * 60 * 60 * 1000)
+  // Create a date in UTC, then manually adjust for Taipei timezone
+  // Since user input is Taipei time (UTC+8), we subtract 8 hours to get UTC
+  const utcDate = new Date(Date.UTC(year, month - 1, day, hours - TAIPEI_OFFSET_HOURS, minutes, 0, 0))
 
-  return utcDateTime.toISOString()
+  return utcDate.toISOString()
 }
 
 /**

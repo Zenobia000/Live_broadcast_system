@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>時區轉換測試</title>
+    <style>
+        body {
+            font-family: system-ui, -apple-system, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .test-box {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .result {
+            background: #f0f9ff;
+            padding: 15px;
+            border-left: 4px solid #0ea5e9;
+            margin: 10px 0;
+            border-radius: 4px;
+        }
+        .code {
+            font-family: 'Courier New', monospace;
+            background: #1e293b;
+            color: #e2e8f0;
+            padding: 15px;
+            border-radius: 4px;
+            overflow-x: auto;
+        }
+        input {
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            margin: 5px;
+        }
+        button {
+            padding: 10px 20px;
+            background: #0ea5e9;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        button:hover {
+            background: #0284c7;
+        }
+    </style>
+</head>
+<body>
+    <h1>🕐 時區轉換測試工具</h1>
+
+    <div class="test-box">
+        <h2>測試 1: localToUTC 函數</h2>
+        <p>輸入台北時間，轉換為 UTC</p>
+        <div>
+            <input type="date" id="testDate" value="2025-10-21">
+            <input type="time" id="testTime" value="14:00">
+            <button onclick="testLocalToUTC()">轉換</button>
+        </div>
+        <div id="result1" class="result" style="margin-top: 10px;"></div>
+    </div>
+
+    <div class="test-box">
+        <h2>轉換邏輯程式碼</h2>
+        <div class="code">
+<pre>
+const TAIPEI_OFFSET_HOURS = 8
+
+function localToUTC(dateString, timeString) {
+  // Parse the date and time components
+  const [year, month, day] = dateString.split('-').map(Number)
+  const [hours, minutes] = timeString.split(':').map(Number)
+
+  // Create a date in UTC, then manually adjust for Taipei timezone
+  // Since user input is Taipei time (UTC+8), we subtract 8 hours to get UTC
+  const utcDate = new Date(Date.UTC(
+    year,
+    month - 1,
+    day,
+    hours - TAIPEI_OFFSET_HOURS,
+    minutes,
+    0,
+    0
+  ))
+
+  return utcDate.toISOString()
+}
+</pre>
+        </div>
+    </div>
+
+    <div class="test-box">
+        <h2>測試範例</h2>
+        <table style="width: 100%; border-collapse: collapse;">
+            <thead>
+                <tr style="background: #f1f5f9;">
+                    <th style="padding: 10px; text-align: left;">台北時間輸入</th>
+                    <th style="padding: 10px; text-align: left;">預期 UTC 輸出</th>
+                    <th style="padding: 10px; text-align: left;">實際結果</th>
+                </tr>
+            </thead>
+            <tbody id="examplesTable"></tbody>
+        </table>
+    </div>
+
+    <script>
+        const TAIPEI_OFFSET_HOURS = 8
+
+        function localToUTC(dateString, timeString) {
+          const [year, month, day] = dateString.split('-').map(Number)
+          const [hours, minutes] = timeString.split(':').map(Number)
+          const utcDate = new Date(Date.UTC(year, month - 1, day, hours - TAIPEI_OFFSET_HOURS, minutes, 0, 0))
+          return utcDate.toISOString()
+        }
+
+        function testLocalToUTC() {
+            const dateString = document.getElementById('testDate').value
+            const timeString = document.getElementById('testTime').value
+
+            const result = localToUTC(dateString, timeString)
+
+            document.getElementById('result1').innerHTML = `
+                <strong>輸入：</strong> ${dateString} ${timeString} (台北時間 UTC+8)<br>
+                <strong>輸出：</strong> ${result}<br>
+                <strong>說明：</strong> 已將台北時間轉換為 UTC 時間（減8小時）
+            `
+        }
+
+        // Run examples on load
+        window.onload = function() {
+            const examples = [
+                ['2025-10-21', '14:00', '2025-10-21T06:00:00.000Z'],
+                ['2025-10-21', '00:00', '2025-10-20T16:00:00.000Z'],
+                ['2025-10-21', '23:30', '2025-10-21T15:30:00.000Z'],
+                ['2025-10-21', '08:00', '2025-10-21T00:00:00.000Z'],
+            ]
+
+            const tbody = document.getElementById('examplesTable')
+            examples.forEach(([date, time, expected]) => {
+                const actual = localToUTC(date, time)
+                const match = actual === expected
+                const row = tbody.insertRow()
+                row.innerHTML = `
+                    <td style="padding: 10px;">${date} ${time}</td>
+                    <td style="padding: 10px;"><code>${expected}</code></td>
+                    <td style="padding: 10px; color: ${match ? 'green' : 'red'};">
+                        ${match ? '✅' : '❌'} <code>${actual}</code>
+                    </td>
+                `
+            })
+        }
+    </script>
+</body>
+</html>

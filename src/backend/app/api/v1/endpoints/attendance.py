@@ -395,7 +395,7 @@ async def quick_check_in(
     from sqlalchemy import select, and_
 
     try:
-        # Find current ongoing event
+        # Find current ongoing event or event within early check-in window
         # Use timezone-aware datetime for proper comparison
         from datetime import timezone
         now = datetime.now(timezone.utc)
@@ -404,15 +404,25 @@ async def quick_check_in(
         logger = logging.getLogger(__name__)
         logger.info(f"[Quick Check-in] Looking for ongoing event at {now.isoformat()}")
 
+        # Allow check-in within early check-in window (same as /today endpoint)
+        from app.core.config import settings
+        EARLY_CHECKIN_MINUTES = settings.EARLY_CHECKIN_MINUTES
+        early_checkin_time = now + timedelta(minutes=EARLY_CHECKIN_MINUTES)
+
+        logger.info(f"[Quick Check-in] Early check-in window: {early_checkin_time.isoformat()}")
+
+        # Find events that:
+        # 1. Start within 15 minutes from now (early check-in window)
+        # 2. OR already started and not yet ended (ongoing events)
         query = (
             select(Event)
             .where(
                 and_(
-                    Event.start_time <= now,
-                    Event.end_time >= now
+                    Event.start_time <= early_checkin_time,  # Allow early check-in
+                    Event.end_time >= now  # Event hasn't ended yet
                 )
             )
-            .order_by(Event.start_time.desc())
+            .order_by(Event.start_time.asc())  # Get earliest upcoming/ongoing event
             .limit(1)
         )
 
