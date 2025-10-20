@@ -79,17 +79,27 @@ async def get_today_status(
         # Convert UTC time to Taipei time for display
         check_in_taipei = attendance.check_in_time.astimezone(TAIPEI_TZ) if attendance.check_in_time else None
 
-        # Even if checked in, check for next available event
+        # Even if checked in, check for next available event that user hasn't checked in to yet
         # This allows users to see and check in to multiple events per day
         from app.core.config import settings as app_settings
         EARLY_CHECKIN_MINUTES = app_settings.EARLY_CHECKIN_MINUTES
+
+        # Find events in the early check-in window that the user hasn't checked in to yet
+        # Use a subquery to exclude events the user has already checked in to
+        from sqlalchemy import exists
+
+        attended_events_subquery = (
+            select(Attendance.event_id)
+            .where(Attendance.user_id == current_user.id)
+        )
 
         next_event_query = (
             select(Event)
             .where(
                 and_(
-                    Event.start_time > event.end_time,  # After current checked-in event
-                    Event.start_time <= now_utc + timedelta(minutes=EARLY_CHECKIN_MINUTES)  # Within early check-in window
+                    Event.id.not_in(attended_events_subquery),  # Not already checked in
+                    Event.start_time - timedelta(minutes=EARLY_CHECKIN_MINUTES) <= now_utc,  # Early check-in window opened
+                    Event.end_time >= now_utc  # Event hasn't ended yet
                 )
             )
             .order_by(Event.start_time.asc())
