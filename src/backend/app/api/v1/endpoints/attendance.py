@@ -16,6 +16,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.dependencies.attendance import AttendanceServiceDep
 from app.api.dependencies.auth import AdminUser, CurrentUser
+from app.core.config import settings
 from app.core.database import get_session as get_db_session
 from app.api.v1.schemas.attendance import (
     AttendanceResponse,
@@ -77,6 +78,45 @@ async def get_today_status(
         attendance, event = attendance_with_event
         # Convert UTC time to Taipei time for display
         check_in_taipei = attendance.check_in_time.astimezone(TAIPEI_TZ) if attendance.check_in_time else None
+
+        # Even if checked in, check for next available event
+        # This allows users to see and check in to multiple events per day
+        from app.core.config import settings as app_settings
+        EARLY_CHECKIN_MINUTES = app_settings.EARLY_CHECKIN_MINUTES
+
+        next_event_query = (
+            select(Event)
+            .where(
+                and_(
+                    Event.start_time > event.end_time,  # After current checked-in event
+                    Event.start_time <= now_utc + timedelta(minutes=EARLY_CHECKIN_MINUTES)  # Within early check-in window
+                )
+            )
+            .order_by(Event.start_time.asc())
+            .limit(1)
+        )
+
+        next_result = await db.execute(next_event_query)
+        next_event = next_result.scalar_one_or_none()
+
+        if next_event:
+            # There's another event available for check-in
+            # Set isCheckedIn to False so the user can check in to the next event
+            next_event_start_taipei = next_event.start_time.astimezone(TAIPEI_TZ)
+            next_event_end_taipei = next_event.end_time.astimezone(TAIPEI_TZ)
+            return {
+                "isCheckedIn": False,  # False so frontend shows check-in button for next event
+                "checkInTime": check_in_taipei.strftime("%H:%M") if check_in_taipei else None,
+                "previousEventTitle": event.title,  # Show previous check-in
+                "eventTitle": next_event.title,  # Next available event
+                "eventId": str(next_event.id),
+                "eventStartTime": next_event_start_taipei.strftime("%H:%M"),
+                "eventEndTime": next_event_end_taipei.strftime("%H:%M"),
+                "nextEventTime": None,
+                "status": "waiting"  # Can check in to next event
+            }
+
+        # No more events today
         return {
             "isCheckedIn": True,
             "checkInTime": check_in_taipei.strftime("%H:%M") if check_in_taipei else None,
