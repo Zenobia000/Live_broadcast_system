@@ -6,25 +6,20 @@ import {
 import UserSelector from '../components/UserSelector'
 import { api } from '../services/api'
 import { goBack } from '../utils/navigation'
+import { localToUTC, getTomorrowDate, isEndTimeAfterStart } from '../utils/timezone'
 
 const CreateEventPage: React.FC = () => {
   const [loading, setLoading] = useState(false)
   const [formData, setFormData] = useState({
     title: '',
     description: '',
-    startDate: getTomorrow(),
+    startDate: getTomorrowDate(),
     startTime: '09:00',
-    endDate: getTomorrow(),
+    endDate: getTomorrowDate(),
     endTime: '10:00',
     gracePeriodMinutes: 5,
     participantIds: [] as number[]
   })
-
-  function getTomorrow() {
-    const tomorrow = new Date()
-    tomorrow.setDate(tomorrow.getDate() + 1)
-    return tomorrow.toISOString().split('T')[0]
-  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -39,12 +34,8 @@ const CreateEventPage: React.FC = () => {
       return
     }
 
-    // Combine date and time
-    const startTime = `${formData.startDate}T${formData.startTime}:00Z`
-    const endTime = `${formData.endDate}T${formData.endTime}:00Z`
-
     // Validate end time after start time
-    if (new Date(endTime) <= new Date(startTime)) {
+    if (!isEndTimeAfterStart(formData.startDate, formData.startTime, formData.endDate, formData.endTime)) {
       showToast({
         type: 'warning',
         message: '結束時間必須晚於開始時間',
@@ -52,6 +43,10 @@ const CreateEventPage: React.FC = () => {
       })
       return
     }
+
+    // Convert Taipei local time to UTC for backend
+    const startTime = localToUTC(formData.startDate, formData.startTime)
+    const endTime = localToUTC(formData.endDate, formData.endTime)
 
     setLoading(true)
 
@@ -145,7 +140,7 @@ const CreateEventPage: React.FC = () => {
 
               {/* Date & Time */}
               <FormSection>
-                <FormLabel required>會議時間</FormLabel>
+                <FormLabel required>會議時間（台北時間 UTC+8）</FormLabel>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <FormLabel className="text-sm text-gray-600">開始日期</FormLabel>
