@@ -41,7 +41,8 @@ const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) =
 const AdminRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const userRole = localStorage.getItem('userRole')
 
-  if (userRole !== 'admin') {
+  // Support both uppercase ADMIN (from backend enum) and lowercase admin (legacy)
+  if (userRole !== 'ADMIN' && userRole !== 'admin') {
     return <Navigate to="/dashboard" replace />
   }
 
