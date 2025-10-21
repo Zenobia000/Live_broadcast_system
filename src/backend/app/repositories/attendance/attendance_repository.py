@@ -26,8 +26,8 @@ class AttendanceRepository:
 
     async def create(
         self,
-        user_id: UUID,
-        event_id: UUID,
+        user_id: int,
+        event_id: int,
         status: AttendanceStatus = AttendanceStatus.ABSENT,
         check_in_time: Optional[datetime] = None,
         note: Optional[str] = None
@@ -160,15 +160,15 @@ class AttendanceRepository:
 
     async def mark_as_leave(
         self,
-        user_id: UUID,
-        event_id: UUID,
+        user_id: int,
+        event_id: int,
         note: Optional[str] = None
     ) -> Attendance:
         """Mark attendance as approved leave.
 
         Args:
-            user_id: User ID
-            event_id: Event ID
+            user_id: User ID (integer)
+            event_id: Event ID (integer)
             note: Leave reason
 
         Returns:
@@ -190,15 +190,15 @@ class AttendanceRepository:
 
     async def mark_as_makeup(
         self,
-        user_id: UUID,
-        event_id: UUID,
+        user_id: int,
+        event_id: int,
         note: str
     ) -> Attendance:
         """Mark attendance as approved makeup.
 
         Args:
-            user_id: User ID
-            event_id: Event ID
+            user_id: User ID (integer)
+            event_id: Event ID (integer)
             note: Makeup reason
 
         Returns:

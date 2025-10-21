@@ -158,15 +158,15 @@ class AttendanceService:
 
     async def approve_leave_request(
         self,
-        user_id: UUID,
-        event_id: UUID,
+        user_id: int,
+        event_id: int,
         note: Optional[str] = None
     ) -> Attendance:
         """Approve leave request and update attendance.
 
         Args:
-            user_id: User ID
-            event_id: Event ID
+            user_id: User ID (integer)
+            event_id: Event ID (integer)
             note: Leave reason
 
         Returns:
@@ -180,15 +180,15 @@ class AttendanceService:
 
     async def approve_makeup_request(
         self,
-        user_id: UUID,
-        event_id: UUID,
+        user_id: int,
+        event_id: int,
         note: str
     ) -> Attendance:
         """Approve makeup request and update attendance.
 
         Args:
-            user_id: User ID
-            event_id: Event ID
+            user_id: User ID (integer)
+            event_id: Event ID (integer)
             note: Makeup reason
 
         Returns:
