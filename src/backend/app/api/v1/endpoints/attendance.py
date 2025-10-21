@@ -559,7 +559,7 @@ async def quick_check_in(
         current_event = result.scalar_one_or_none()
 
         if not current_event:
-            logger.warning(f"[Quick Check-in] No ongoing event found at {now_str}")
+            logger.warning(f"[Quick Check-in] No ongoing event found at {now.isoformat()}")
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="目前沒有進行中的事件可以簽到"
