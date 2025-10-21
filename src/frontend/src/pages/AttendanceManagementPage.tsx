@@ -93,13 +93,21 @@ export default function AttendanceManagementPage() {
       <header className="bg-white dark:bg-gray-800 shadow-sm sticky top-0 z-10">
         <div className="max-w-6xl mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-4">
+            <div className="flex items-center space-x-2">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => navigate('/dashboard')}
+              >
+                🏠 首頁
+              </Button>
+              <span className="text-gray-300 dark:text-gray-600">|</span>
               <Button
                 variant="ghost"
                 size="sm"
                 onClick={() => navigate('/admin')}
               >
-                ← 返回
+                ← 返回管理
               </Button>
               <h1 className="text-2xl font-semibold text-gray-900 dark:text-white">
                 會議出席統計

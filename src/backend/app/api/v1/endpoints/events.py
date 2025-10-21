@@ -291,34 +291,59 @@ async def get_attendance_overview(
         attended_users = []
         absent_users = []
 
-        for participant in participants:
-            user = participant.user
-            attendance = attendance_by_user.get(user.id)
+        # If there are participants defined, use them as the base
+        if participants:
+            for participant in participants:
+                user = participant.user
+                attendance = attendance_by_user.get(user.id)
 
-            user_info = {
-                "id": user.id,
-                "name": user.name,
-                "email": user.email,
-                "avatar_url": user.avatar_url
-            }
+                user_info = {
+                    "id": user.id,
+                    "name": user.name,
+                    "email": user.email,
+                    "avatar_url": user.avatar_url
+                }
 
-            if attendance and attendance.is_present_or_late:
-                # User checked in
-                attended_users.append({
-                    **user_info,
-                    "status": attendance.status.value if hasattr(attendance.status, 'value') else str(attendance.status),
-                    "check_in_time": attendance.check_in_time.isoformat() if attendance.check_in_time else None
-                })
-            else:
-                # User did not check in (or has excused absence)
-                status = "absent"
-                if attendance:
+                if attendance and attendance.is_present_or_late:
+                    # User checked in
+                    attended_users.append({
+                        **user_info,
+                        "status": attendance.status.value if hasattr(attendance.status, 'value') else str(attendance.status),
+                        "check_in_time": attendance.check_in_time.isoformat() if attendance.check_in_time else None
+                    })
+                else:
+                    # User did not check in (or has excused absence)
+                    status = "absent"
+                    if attendance:
+                        status = attendance.status.value if hasattr(attendance.status, 'value') else str(attendance.status)
+
+                    absent_users.append({
+                        **user_info,
+                        "status": status
+                    })
+        else:
+            # No participants defined - use actual attendance records
+            for attendance in attendances:
+                user = attendance.user
+                user_info = {
+                    "id": user.id,
+                    "name": user.name,
+                    "email": user.email,
+                    "avatar_url": user.avatar_url
+                }
+
+                if attendance.is_present_or_late:
+                    attended_users.append({
+                        **user_info,
+                        "status": attendance.status.value if hasattr(attendance.status, 'value') else str(attendance.status),
+                        "check_in_time": attendance.check_in_time.isoformat() if attendance.check_in_time else None
+                    })
+                else:
                     status = attendance.status.value if hasattr(attendance.status, 'value') else str(attendance.status)
-
-                absent_users.append({
-                    **user_info,
-                    "status": status
-                })
+                    absent_users.append({
+                        **user_info,
+                        "status": status
+                    })
 
         # Convert event times to Taipei timezone for display
         TAIPEI_TZ = timezone(timedelta(hours=8))

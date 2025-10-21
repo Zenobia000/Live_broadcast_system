@@ -18,10 +18,15 @@ const AdminPage: React.FC = () => {
     leaveRequests: [],
     makeupRequests: []
   })
+  const [allRequests, setAllRequests] = useState<PendingRequests>({
+    leaveRequests: [],
+    makeupRequests: []
+  })
   const [selectedItems, setSelectedItems] = useState<Set<string>>(new Set())
 
   useEffect(() => {
     loadPendingRequests()
+    loadAllRequests()
   }, [])
 
   const loadPendingRequests = async () => {
@@ -39,6 +44,22 @@ const AdminPage: React.FC = () => {
       })
     } finally {
       setLoading(false)
+    }
+  }
+
+  const loadAllRequests = async () => {
+    try {
+      const [leaveResponse, makeupResponse] = await Promise.all([
+        api.getLeaveRequests(),
+        api.getMakeupRequests()
+      ])
+
+      setAllRequests({
+        leaveRequests: leaveResponse.success ? leaveResponse.data : [],
+        makeupRequests: makeupResponse.success ? makeupResponse.data : []
+      })
+    } catch (error: any) {
+      console.error('Failed to load all requests:', error)
     }
   }
 
@@ -308,15 +329,15 @@ const AdminPage: React.FC = () => {
       <header className="bg-white dark:bg-gray-800 shadow-sm">
         <div className="max-w-4xl mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
-            <div className="flex items-center">
+            <div className="flex items-center space-x-2">
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={goBack}
-                className="mr-4"
+                onClick={() => window.location.href = '/dashboard'}
               >
-                ← 返回
+                🏠 首頁
               </Button>
+              <span className="text-gray-300 dark:text-gray-600">|</span>
               <h1 className="text-xl font-semibold text-gray-900 dark:text-white">
                 審核管理
               </h1>
@@ -439,17 +460,83 @@ const AdminPage: React.FC = () => {
         )}
 
         {activeTab === 'all' && (
-          <Card>
-            <CardBody className="text-center py-12">
-              <div className="text-4xl mb-4">🚧</div>
-              <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
-                功能開發中
-              </h2>
-              <p className="text-gray-600 dark:text-gray-400">
-                歷史記錄功能即將上線
-              </p>
-            </CardBody>
-          </Card>
+          <div className="space-y-4">
+            {loading ? (
+              <CardSkeleton count={3} />
+            ) : (
+              <>
+                {allRequests.leaveRequests.length === 0 && allRequests.makeupRequests.length === 0 ? (
+                  <Card>
+                    <CardBody className="text-center py-12">
+                      <div className="text-6xl mb-4">📋</div>
+                      <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+                        沒有任何申請記錄
+                      </h2>
+                      <p className="text-gray-600 dark:text-gray-400">
+                        系統中暫無請假或補簽申請
+                      </p>
+                    </CardBody>
+                  </Card>
+                ) : (
+                  [...allRequests.leaveRequests, ...allRequests.makeupRequests]
+                    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+                    .map((request) => {
+                      const type = 'missedDate' in request ? 'makeup' : 'leave'
+                      const isProcessing = processing === request.id
+
+                      const getStatusBadge = () => {
+                        if (request.status === 'approved') {
+                          return <Badge variant="success" size="sm">✅ 已批准</Badge>
+                        } else if (request.status === 'rejected') {
+                          return <Badge variant="error" size="sm">❌ 已拒絕</Badge>
+                        } else {
+                          return <Badge variant="warning" size="sm">⏳ 待審核</Badge>
+                        }
+                      }
+
+                      return (
+                        <Card key={`${type}-${request.id}`}>
+                          <CardBody>
+                            <div className="flex items-start justify-between">
+                              <div className="flex-1">
+                                <div className="flex items-center space-x-2 mb-2">
+                                  <h3 className="font-medium text-gray-900 dark:text-white">
+                                    {type === 'leave' ? '請假申請' : '補簽申請'}
+                                  </h3>
+                                  {getStatusBadge()}
+                                </div>
+                                <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">
+                                  申請時間：{formatDateTime(request.createdAt)}
+                                </p>
+                                {type === 'leave' && 'startDate' in request && (
+                                  <p className="text-sm text-gray-600 dark:text-gray-400">
+                                    請假日期：{formatDate(request.startDate)}
+                                    {request.startDate !== request.endDate && ` - ${formatDate(request.endDate)}`}
+                                  </p>
+                                )}
+                                {type === 'makeup' && 'missedDate' in request && (
+                                  <p className="text-sm text-gray-600 dark:text-gray-400">
+                                    補簽日期：{formatDate(request.missedDate)}
+                                  </p>
+                                )}
+                                <p className="text-sm text-gray-900 dark:text-white mt-2">
+                                  <span className="font-medium">原因：</span>{request.reason}
+                                </p>
+                                {request.reviewedBy && request.reviewedAt && (
+                                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
+                                    審核時間：{formatDateTime(request.reviewedAt)}
+                                  </p>
+                                )}
+                              </div>
+                            </div>
+                          </CardBody>
+                        </Card>
+                      )
+                    })
+                )}
+              </>
+            )}
+          </div>
         )}
       </main>
     </div>
