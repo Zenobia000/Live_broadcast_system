@@ -92,6 +92,35 @@ export interface CreateEventData {
   participantIds: number[]
 }
 
+export interface EventAttendanceOverview {
+  id: number
+  title: string
+  description?: string
+  start_time: string
+  end_time: string
+  grace_period_minutes: number
+  statistics: {
+    expected_count: number
+    attended_count: number
+    absent_count: number
+  }
+  attended_users: Array<{
+    id: number
+    name: string
+    email: string
+    avatar_url?: string
+    status: string
+    check_in_time?: string
+  }>
+  absent_users: Array<{
+    id: number
+    name: string
+    email: string
+    avatar_url?: string
+    status: string
+  }>
+}
+
 // API Client Class
 class ApiClient {
   private client: AxiosInstance
@@ -410,6 +439,18 @@ class ApiClient {
     return response.data
   }
 
+  async getAttendanceOverview(params?: {
+    startDate?: string
+    endDate?: string
+    limit?: number
+  }): Promise<ApiResponse<{
+    data: EventAttendanceOverview[]
+    total: number
+  }>> {
+    const response = await this.client.get('/events/admin/attendance-overview', { params })
+    return response.data
+  }
+
   // Health check
   async healthCheck(): Promise<ApiResponse<{ status: string; version: string }>> {
     const response = await this.client.get('/health')
@@ -470,6 +511,8 @@ export const api = {
     action: 'approve' | 'reject',
     comment?: string
   ) => apiClient.reviewRequest(id, type, action, comment),
+  getAttendanceOverview: (params?: { startDate?: string; endDate?: string; limit?: number }) =>
+    apiClient.getAttendanceOverview(params),
 
   // Health
   healthCheck: () => apiClient.healthCheck(),

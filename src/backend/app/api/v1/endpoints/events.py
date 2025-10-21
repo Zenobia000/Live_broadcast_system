@@ -222,3 +222,127 @@ async def delete_event(
     """
     # TODO: Implement with proper dependency injection
     return {"message": "Event deletion functionality will be available after dependency injection setup"}
+
+
+@router.get("/admin/attendance-overview")
+async def get_attendance_overview(
+    admin_user: AdminUser,
+    db: AsyncSession = Depends(get_db_session),
+    start_date: datetime | None = None,
+    end_date: datetime | None = None,
+    limit: int = 50
+):
+    """Get attendance overview for all events (admin only).
+
+    Returns event list with attendance statistics:
+    - Expected attendees (participants)
+    - Actually attended (checked in)
+    - Not attended (absent)
+
+    Args:
+        admin_user: Current admin user
+        db: Database session
+        start_date: Filter events from this date (optional)
+        end_date: Filter events to this date (optional)
+        limit: Maximum number of events to return (default: 50)
+
+    Returns:
+        List of events with attendance breakdown
+    """
+    from datetime import timezone
+    from sqlalchemy import select, func, case
+    from sqlalchemy.orm import selectinload
+    from app.models.calendar.event import Event
+    from app.models.calendar.event_participant import EventParticipant
+    from app.models.attendance.attendance import Attendance
+    from app.models.auth.user import User
+    from app.models.enums import AttendanceStatus
+
+    # Build query for events
+    query = select(Event).options(
+        selectinload(Event.participants).selectinload(EventParticipant.user),
+        selectinload(Event.attendances).selectinload(Attendance.user)
+    )
+
+    # Apply date filters if provided
+    if start_date:
+        query = query.where(Event.start_time >= start_date)
+    if end_date:
+        query = query.where(Event.start_time <= end_date)
+
+    # Order by start time descending (newest first) and limit
+    query = query.order_by(Event.start_time.desc()).limit(limit)
+
+    result = await db.execute(query)
+    events = result.scalars().all()
+
+    # Build response with attendance statistics
+    event_list = []
+    for event in events:
+        # Get all participants (expected attendees)
+        participants = event.participants
+        participant_ids = {p.user_id for p in participants}
+
+        # Get attendance records
+        attendances = event.attendances
+        attendance_by_user = {a.user_id: a for a in attendances if not a.deleted_at}
+
+        # Categorize users
+        attended_users = []
+        absent_users = []
+
+        for participant in participants:
+            user = participant.user
+            attendance = attendance_by_user.get(user.id)
+
+            user_info = {
+                "id": user.id,
+                "name": user.name,
+                "email": user.email,
+                "avatar_url": user.avatar_url
+            }
+
+            if attendance and attendance.is_present_or_late:
+                # User checked in
+                attended_users.append({
+                    **user_info,
+                    "status": attendance.status.value if hasattr(attendance.status, 'value') else str(attendance.status),
+                    "check_in_time": attendance.check_in_time.isoformat() if attendance.check_in_time else None
+                })
+            else:
+                # User did not check in (or has excused absence)
+                status = "absent"
+                if attendance:
+                    status = attendance.status.value if hasattr(attendance.status, 'value') else str(attendance.status)
+
+                absent_users.append({
+                    **user_info,
+                    "status": status
+                })
+
+        # Convert event times to Taipei timezone for display
+        TAIPEI_TZ = timezone(timedelta(hours=8))
+        start_taipei = event.start_time.astimezone(TAIPEI_TZ)
+        end_taipei = event.end_time.astimezone(TAIPEI_TZ)
+
+        event_list.append({
+            "id": event.id,
+            "title": event.title,
+            "description": event.description,
+            "start_time": start_taipei.isoformat(),
+            "end_time": end_taipei.isoformat(),
+            "grace_period_minutes": event.grace_period_minutes,
+            "statistics": {
+                "expected_count": len(participants),
+                "attended_count": len(attended_users),
+                "absent_count": len(absent_users)
+            },
+            "attended_users": attended_users,
+            "absent_users": absent_users
+        })
+
+    return {
+        "success": True,
+        "data": event_list,
+        "total": len(event_list)
+    }

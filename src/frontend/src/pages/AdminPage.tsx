@@ -324,6 +324,13 @@ const AdminPage: React.FC = () => {
 
             <div className="flex gap-2">
               <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => window.location.href = '/admin/attendance'}
+              >
+                📊 出席統計
+              </Button>
+              <Button
                 variant="primary"
                 size="sm"
                 onClick={() => window.location.href = '/create-event'}
