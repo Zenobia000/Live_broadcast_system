@@ -47,8 +47,11 @@ const DashboardPage: React.FC = () => {
   const loadTodayStatus = async () => {
     try {
       const response = await api.getTodayStatus()
+      console.log('[TodayStatus] Response:', response)
       if (response.success) {
         setTodayStatus(response.data)
+        // Cache the data for offline use
+        localStorage.setItem('cached_today_status', JSON.stringify(response.data))
       }
     } catch (error) {
       console.error('Failed to load today status:', error)
@@ -231,20 +234,70 @@ const DashboardPage: React.FC = () => {
 
   const handleManualCheckIn = async (eventId?: string) => {
     try {
+      console.log('[Check-in] Starting check-in for event:', eventId)
       const response = await api.manualCheckIn(eventId)
-      if (response.success) {
+      console.log('[Check-in] Full response object:', JSON.stringify(response, null, 2))
+
+      // Check if response exists and has success property
+      if (!response) {
+        throw new Error('No response received from server')
+      }
+
+      // Handle both wrapped and unwrapped response formats
+      const isSuccess = response.success === true || response.data?.attendance
+      console.log('[Check-in] Is success:', isSuccess)
+
+      if (isSuccess) {
         showToast({
           type: 'success',
-          message: '手動簽到成功！',
+          message: '簽到成功！',
           autoClose: 3000
         })
-        await loadTodayStatus()
-        await loadAttendanceHistory()
+
+        // Wait a bit for database transaction to fully commit
+        console.log('[Check-in] Waiting 500ms before refresh...')
+        await new Promise(resolve => setTimeout(resolve, 500))
+
+        // Reload data to show updated status
+        console.log('[Check-in] Reloading status...')
+        try {
+          await Promise.all([
+            loadTodayStatus(),
+            loadAttendanceHistory()
+          ])
+          console.log('[Check-in] Status reloaded successfully')
+        } catch (refreshError) {
+          console.error('[Check-in] Error during refresh:', refreshError)
+          showToast({
+            type: 'warning',
+            message: '簽到成功，但刷新狀態時發生錯誤。請手動重新整理頁面。',
+            autoClose: 5000
+          })
+        }
+      } else {
+        console.error('[Check-in] Response indicates failure:', response)
+        showToast({
+          type: 'error',
+          message: response.error || response.message || '簽到失敗',
+          autoClose: 5000
+        })
       }
     } catch (error: any) {
+      console.error('[Check-in] Exception caught:', error)
+      console.error('[Check-in] Error details:', {
+        message: error.message,
+        response: error.response?.data,
+        status: error.response?.status
+      })
+
+      const errorMessage = error.response?.data?.detail
+        || error.response?.data?.message
+        || error.message
+        || '簽到失敗，請重試'
+
       showToast({
         type: 'error',
-        message: error.response?.data?.message || '簽到失敗，請重試',
+        message: errorMessage,
         autoClose: 5000
       })
     }
