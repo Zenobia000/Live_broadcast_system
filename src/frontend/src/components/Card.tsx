@@ -42,10 +42,18 @@ const Card: React.FC<CardProps> = ({ children, className = '', hover = false, on
 export interface CardHeaderProps {
   children: React.ReactNode
   className?: string
+  onClick?: () => void
 }
 
-export const CardHeader: React.FC<CardHeaderProps> = ({ children, className = '' }) => {
-  return <div className={`px-6 py-4 border-b border-gray-100 ${className}`}>{children}</div>
+export const CardHeader: React.FC<CardHeaderProps> = ({ children, className = '', onClick }) => {
+  return (
+    <div
+      className={`px-6 py-4 border-b border-gray-100 ${className}`}
+      onClick={onClick}
+    >
+      {children}
+    </div>
+  )
 }
 
 export interface CardBodyProps {
