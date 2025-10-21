@@ -16,18 +16,22 @@ export default function AttendanceManagementPage() {
       setLoading(true)
       const response = await api.getAttendanceOverview({ limit: 50 })
 
-      if (response.success) {
-        setEvents(response.data.data)
+      if (response.success && response.data) {
+        // Backend returns { success: true, data: [...], total: N }
+        setEvents(Array.isArray(response.data) ? response.data : [])
       } else {
+        setEvents([]) // Ensure events is always an array
         showToast({
           type: 'error',
           message: response.error || '無法獲取出席統計'
         })
       }
     } catch (error: any) {
+      setEvents([]) // Ensure events is always an array on error
+      console.error('Attendance overview error:', error)
       showToast({
         type: 'error',
-        message: error.response?.data?.message || '載入出席統計失敗'
+        message: error.response?.data?.detail || error.response?.data?.message || '載入出席統計失敗'
       })
     } finally {
       setLoading(false)
