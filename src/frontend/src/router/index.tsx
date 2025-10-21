@@ -14,6 +14,7 @@ const AttendanceManagementPage = React.lazy(() => import('../pages/AttendanceMan
 const CreateEventPage = React.lazy(() => import('../pages/CreateEventPage'))
 const ProfilePage = React.lazy(() => import('../pages/ProfilePage'))
 const StatusPage = React.lazy(() => import('../pages/StatusPage'))
+const EventHistoryPage = React.lazy(() => import('../pages/EventHistoryPage'))
 
 // Layout Component with Suspense
 const PageLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -147,6 +148,14 @@ export const router = createBrowserRouter([
     element: (
       <ProtectedRoute>
         <StatusPage />
+      </ProtectedRoute>
+    ),
+  },
+  {
+    path: '/history',
+    element: (
+      <ProtectedRoute>
+        <EventHistoryPage />
       </ProtectedRoute>
     ),
   },

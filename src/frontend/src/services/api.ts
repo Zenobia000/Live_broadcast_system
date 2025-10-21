@@ -331,6 +331,30 @@ class ApiClient {
     return response.data
   }
 
+  async getEventAttendanceDetail(eventId: number): Promise<ApiResponse<{
+    event_id: number
+    event_title: string
+    event_description: string | null
+    start_time: string
+    end_time: string
+    total_participants: number
+    present_count: number
+    late_count: number
+    absent_count: number
+    leave_count: number
+    participants: Array<{
+      user_id: number
+      user_name: string
+      user_email: string
+      status: string
+      check_in_time: string | null
+      note: string | null
+    }>
+  }>> {
+    const response = await this.client.get(`/attendance/events/${eventId}/attendance`)
+    return response.data
+  }
+
   // Calendar APIs
   async getCalendarEvents(daysAhead = 7): Promise<ApiResponse<{
     events: Array<{

@@ -319,3 +319,99 @@ class AttendanceService:
             "leave": 0,
             "makeup": 0
         }
+
+    async def get_event_attendance_details(
+        self,
+        event_id: int
+    ) -> dict:
+        """Get detailed attendance information for a specific event.
+
+        Args:
+            event_id: Event ID
+
+        Returns:
+            Dict containing event details and participant attendance information
+        """
+        from app.models.event_participants import EventParticipant
+        from app.models.user.user import User
+        from sqlalchemy import select, and_
+        from sqlalchemy.orm import joinedload
+
+        # Get event details
+        event = await self.event_repository.get_by_id(event_id)
+        if not event:
+            raise ValueError(f"Event {event_id} not found")
+
+        # Get all participants for this event (from event_participants table)
+        from app.core.database import get_session
+        async for session in get_session():
+            # Query event participants with user information
+            participants_query = (
+                select(EventParticipant)
+                .where(EventParticipant.event_id == event_id)
+                .options(joinedload(EventParticipant.user))
+            )
+            participants_result = await session.execute(participants_query)
+            participants = participants_result.scalars().all()
+
+            # Get all attendance records for this event
+            attendance_records = {}
+            for attendance in await self.attendance_repository.list_by_event(event_id):
+                attendance_records[attendance.user_id] = attendance
+
+            # Build participant details list
+            participant_details = []
+            present_count = 0
+            late_count = 0
+            absent_count = 0
+            leave_count = 0
+
+            for participant in participants:
+                user = participant.user
+                attendance = attendance_records.get(user.id)
+
+                if attendance:
+                    status = attendance.status.value if hasattr(attendance.status, 'value') else str(attendance.status)
+                    check_in_time = attendance.check_in_time
+                    note = attendance.note
+
+                    # Count statistics
+                    if status.lower() == 'present':
+                        present_count += 1
+                    elif status.lower() == 'late':
+                        late_count += 1
+                    elif status.lower() == 'leave':
+                        leave_count += 1
+                    else:
+                        absent_count += 1
+                else:
+                    # No attendance record = absent
+                    status = 'absent'
+                    check_in_time = None
+                    note = None
+                    absent_count += 1
+
+                participant_details.append({
+                    "user_id": user.id,
+                    "user_name": user.name,
+                    "user_email": user.email,
+                    "status": status.lower(),
+                    "check_in_time": check_in_time,
+                    "note": note
+                })
+
+            break  # Exit async context manager
+
+        return {
+            "event_id": event.id,
+            "event_title": event.title,
+            "event_description": event.description,
+            "start_time": event.start_time,
+            "end_time": event.end_time,
+            "total_participants": len(participant_details),
+            "present_count": present_count,
+            "late_count": late_count,
+            "absent_count": absent_count,
+            "leave_count": leave_count,
+            "participants": participant_details
+        }

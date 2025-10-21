@@ -107,3 +107,33 @@ class AttendanceSummary(BaseModel):
         ...,
         description="Punctuality rate (present) / (present + late)"
     )
+
+
+class ParticipantAttendanceDetail(BaseModel):
+    """Schema for individual participant attendance detail."""
+
+    user_id: int = Field(..., description="User ID")
+    user_name: str = Field(..., description="User display name")
+    user_email: str = Field(..., description="User email")
+    status: str = Field(..., description="Attendance status (present/late/absent/leave)")
+    check_in_time: Optional[datetime] = Field(None, description="Check-in timestamp")
+    note: Optional[str] = Field(None, description="Additional notes")
+
+
+class EventAttendanceDetail(BaseModel):
+    """Schema for event with detailed participant attendance information."""
+
+    event_id: int = Field(..., description="Event ID")
+    event_title: str = Field(..., description="Event title")
+    event_description: Optional[str] = Field(None, description="Event description")
+    start_time: datetime = Field(..., description="Event start time")
+    end_time: datetime = Field(..., description="Event end time")
+    total_participants: int = Field(..., description="Total number of participants")
+    present_count: int = Field(..., description="Number of participants present")
+    late_count: int = Field(..., description="Number of participants late")
+    absent_count: int = Field(..., description="Number of participants absent")
+    leave_count: int = Field(..., description="Number of approved leaves")
+    participants: List[ParticipantAttendanceDetail] = Field(
+        ...,
+        description="Detailed list of all participants and their attendance status"
+    )

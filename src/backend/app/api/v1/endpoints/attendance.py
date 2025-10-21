@@ -25,6 +25,7 @@ from app.api.v1.schemas.attendance import (
     AutoCheckInResponse,
     CheckInRequest,
     CheckInResponse,
+    EventAttendanceDetail,
 )
 from app.services.calendar.google_calendar_service import GoogleCalendarService
 
@@ -803,22 +804,40 @@ async def get_my_attendance(
         )
 
 
-@router.get("/events/{event_id}/attendance", response_model=List[AttendanceWithDetails])
+@router.get("/events/{event_id}/attendance", response_model=EventAttendanceDetail)
 async def get_event_attendance(
-    event_id: UUID,
-    admin_user: AdminUser
+    event_id: int,
+    current_user: CurrentUser,
+    attendance_service: AttendanceServiceDep
 ):
-    """Get attendance records for specific event (admin only).
+    """Get detailed attendance information for specific event.
 
     Args:
         event_id: Event ID
-        admin_user: Current admin user
+        current_user: Current authenticated user
 
     Returns:
-        List of attendance records for the event
+        Detailed event attendance information with participant list
+
+    Raises:
+        HTTPException: If event not found
     """
-    # TODO: Implement with proper dependency injection
-    return []
+    try:
+        attendance_details = await attendance_service.get_event_attendance_details(event_id)
+        return EventAttendanceDetail(**attendance_details)
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=str(e)
+        )
+    except Exception as e:
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.error(f"Error getting event attendance details: {str(e)}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to get event attendance: {str(e)}"
+        )
 
 
 @router.get("/{attendance_id}", response_model=AttendanceResponse)
