@@ -254,10 +254,6 @@ const DashboardPage: React.FC = () => {
           autoClose: 3000
         })
 
-        // Wait a bit for database transaction to fully commit
-        console.log('[Check-in] Waiting 500ms before refresh...')
-        await new Promise(resolve => setTimeout(resolve, 500))
-
         // Reload data to show updated status
         console.log('[Check-in] Reloading status...')
         try {
@@ -294,6 +290,21 @@ const DashboardPage: React.FC = () => {
         || error.response?.data?.message
         || error.message
         || '簽到失敗，請重試'
+
+      // Handle 409 Conflict (duplicate check-in) as info rather than error
+      if (error.response?.status === 409) {
+        showToast({
+          type: 'info',
+          message: errorMessage,
+          autoClose: 3000
+        })
+        // Refresh to show current status
+        await Promise.all([
+          loadTodayStatus(),
+          loadAttendanceHistory()
+        ]).catch(console.error)
+        return
+      }
 
       showToast({
         type: 'error',

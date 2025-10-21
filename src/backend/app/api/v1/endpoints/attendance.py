@@ -13,6 +13,7 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.exc import IntegrityError
 
 from app.api.dependencies.attendance import AttendanceServiceDep
 from app.api.dependencies.auth import AdminUser, CurrentUser
@@ -578,6 +579,12 @@ async def quick_check_in(
         status_value = attendance.status.value if hasattr(attendance.status, 'value') else str(attendance.status)
         was_late = status_value.upper() == "LATE"
 
+        # Log successful check-in
+        logger.info(
+            f"User {current_user.id} checked in to event '{current_event.title}' "
+            f"(event_id={current_event.id}), status: {status_value}"
+        )
+
         return {
             "success": True,
             "data": {
@@ -594,6 +601,18 @@ async def quick_check_in(
 
     except HTTPException:
         raise
+    except IntegrityError as e:
+        # Unique constraint violation - user already checked in for this event
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.warning(
+            f"Duplicate check-in attempt: user_id={current_user.id}, "
+            f"event_id={current_event.id if 'current_event' in locals() else 'unknown'}"
+        )
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="您已經完成此活動的簽到，無需重複簽到"
+        )
     except ValueError as e:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -646,18 +665,44 @@ async def manual_check_in_with_event(
 
         was_late = (attendance.status == AttendanceStatus.LATE)
 
+        # Log successful check-in
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.info(
+            f"User {current_user.id} checked in to event {checkin_request.event_id}, "
+            f"status: {attendance.status.value if hasattr(attendance.status, 'value') else attendance.status}"
+        )
+
         return CheckInResponse(
             attendance=AttendanceResponse(**attendance_data),
             was_late=was_late,
             message="Successfully checked in" + (" (late)" if was_late else "")
         )
 
+    except IntegrityError as e:
+        # Unique constraint violation - user already checked in for this event
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.warning(
+            f"Duplicate check-in attempt: user_id={current_user.id}, "
+            f"event_id={checkin_request.event_id}"
+        )
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="您已經完成此活動的簽到，無需重複簽到"
+        )
     except ValueError as e:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=str(e)
         )
     except Exception as e:
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.error(
+            f"Check-in failed for user {current_user.id}, event {checkin_request.event_id}: {str(e)}",
+            exc_info=True
+        )
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Check-in failed: {str(e)}"
