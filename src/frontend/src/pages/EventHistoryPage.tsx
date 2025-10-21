@@ -1,7 +1,19 @@
 import React, { useState, useEffect } from 'react'
-import { ChevronDownIcon, ChevronRightIcon } from '@heroicons/react/24/outline'
 import api from '../services/api'
-import { useToast } from '../contexts/ToastContext'
+import { showToast } from '../components'
+
+// Simple chevron icons using CSS
+const ChevronDown: React.FC<{ className?: string }> = ({ className }) => (
+  <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+  </svg>
+)
+
+const ChevronRight: React.FC<{ className?: string }> = ({ className }) => (
+  <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+  </svg>
+)
 
 interface ParticipantDetail {
   user_id: number
@@ -40,7 +52,6 @@ const EventHistoryPage: React.FC = () => {
   const [expandedEvents, setExpandedEvents] = useState<Set<number>>(new Set())
   const [eventDetails, setEventDetails] = useState<Map<number, EventDetail>>(new Map())
   const [loadingDetails, setLoadingDetails] = useState<Set<number>>(new Set())
-  const { showToast } = useToast()
 
   useEffect(() => {
     loadAttendanceHistory()
@@ -187,9 +198,9 @@ const EventHistoryPage: React.FC = () => {
                   >
                     <div className="flex items-center space-x-4 flex-1">
                       {isExpanded ? (
-                        <ChevronDownIcon className="w-5 h-5 text-gray-400" />
+                        <ChevronDown className="w-5 h-5 text-gray-400" />
                       ) : (
-                        <ChevronRightIcon className="w-5 h-5 text-gray-400" />
+                        <ChevronRight className="w-5 h-5 text-gray-400" />
                       )}
                       <div className="text-left flex-1">
                         <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
