@@ -58,7 +58,7 @@ class AttendanceRepository:
         return result.scalar_one_or_none()
 
     async def get_by_user_and_event(
-        self, user_id: UUID, event_id: UUID
+        self, user_id: int, event_id: int
     ) -> Optional[Attendance]:
         """Get attendance record for specific user and event."""
         result = await self.session.execute(
@@ -120,16 +120,16 @@ class AttendanceRepository:
 
     async def check_in_user(
         self,
-        user_id: UUID,
-        event_id: UUID,
+        user_id: int,
+        event_id: int,
         check_in_time: datetime,
         is_late: bool = False
     ) -> Attendance:
         """Check in user for an event.
 
         Args:
-            user_id: User ID
-            event_id: Event ID
+            user_id: User ID (integer)
+            event_id: Event ID (integer)
             check_in_time: Time of check-in
             is_late: Whether check-in is late
 

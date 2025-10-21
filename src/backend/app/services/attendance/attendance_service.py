@@ -83,15 +83,15 @@ class AttendanceService:
 
     async def manual_check_in(
         self,
-        user_id: UUID,
-        event_id: UUID,
+        user_id: int,
+        event_id: int,
         check_in_time: Optional[datetime] = None
     ) -> Attendance:
         """Manual check-in for specific event.
 
         Args:
-            user_id: User ID
-            event_id: Event ID
+            user_id: User ID (integer)
+            event_id: Event ID (integer)
             check_in_time: Check-in time (default: now, timezone-aware)
 
         Returns:

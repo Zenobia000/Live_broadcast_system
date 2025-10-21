@@ -48,7 +48,7 @@ class EventRepository:
         await self.session.refresh(event)
         return event
 
-    async def get_by_id(self, event_id: UUID) -> Optional[Event]:
+    async def get_by_id(self, event_id: int) -> Optional[Event]:
         """Get event by ID."""
         result = await self.session.execute(
             select(Event).where(Event.id == event_id)
