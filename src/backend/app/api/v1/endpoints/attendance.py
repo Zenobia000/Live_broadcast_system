@@ -63,9 +63,22 @@ async def get_today_status(
     early_checkin_time = now_utc + timedelta(minutes=EARLY_CHECKIN_MINUTES)
 
     # Subquery to get events user has already checked in to
+    # Only count PRESENT, LATE, or LEAVE status (actual check-ins)
+    from app.models.enums import AttendanceStatus
     attended_events_subquery = (
         select(Attendance.event_id)
-        .where(Attendance.user_id == current_user.id)
+        .where(
+            and_(
+                Attendance.user_id == current_user.id,
+                Attendance.deleted_at.is_(None),  # Not soft-deleted
+                Attendance.status.in_([
+                    AttendanceStatus.PRESENT,
+                    AttendanceStatus.LATE,
+                    AttendanceStatus.LEAVE,
+                    AttendanceStatus.MAKEUP
+                ])
+            )
+        )
     )
 
     # Query all available events for check-in
@@ -102,6 +115,7 @@ async def get_today_status(
         .where(
             and_(
                 Attendance.user_id == current_user.id,
+                Attendance.deleted_at.is_(None),  # Filter out soft-deleted records
                 Event.start_time >= today_start,
                 Event.start_time <= today_end
             )
@@ -199,9 +213,22 @@ async def get_today_status(
     # 3. User hasn't checked in yet
 
     # Subquery to get events user has already checked in to
+    # Only count PRESENT, LATE, or LEAVE status (actual check-ins)
+    from app.models.enums import AttendanceStatus
     attended_events_subquery = (
         select(Attendance.event_id)
-        .where(Attendance.user_id == current_user.id)
+        .where(
+            and_(
+                Attendance.user_id == current_user.id,
+                Attendance.deleted_at.is_(None),  # Not soft-deleted
+                Attendance.status.in_([
+                    AttendanceStatus.PRESENT,
+                    AttendanceStatus.LATE,
+                    AttendanceStatus.LEAVE,
+                    AttendanceStatus.MAKEUP
+                ])
+            )
+        )
     )
 
     current_event_query = (
