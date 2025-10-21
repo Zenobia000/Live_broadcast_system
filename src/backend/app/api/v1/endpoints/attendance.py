@@ -631,19 +631,13 @@ async def manual_check_in_with_event(
             check_in_time=checkin_request.check_in_time
         )
 
-        was_late = attendance.status.value == "LATE"
+        # Determine if check-in was late
+        was_late = (attendance.status == AttendanceStatus.LATE or
+                    (hasattr(attendance.status, 'value') and attendance.status.value == "LATE"))
 
+        # Use Pydantic's from_attributes to automatically extract data from ORM model
         return CheckInResponse(
-            attendance=AttendanceResponse(
-                id=attendance.id,
-                user_id=attendance.user_id,
-                event_id=attendance.event_id,
-                status=attendance.status.value,
-                check_in_time=attendance.check_in_time,
-                note=attendance.note,
-                created_at=attendance.created_at,
-                updated_at=attendance.updated_at
-            ),
+            attendance=AttendanceResponse.model_validate(attendance),
             was_late=was_late,
             message="Successfully checked in" + (" (late)" if was_late else "")
         )
