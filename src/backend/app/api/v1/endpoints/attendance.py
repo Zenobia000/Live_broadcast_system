@@ -568,15 +568,15 @@ async def quick_check_in(
 
         logger.info(f"[Quick Check-in] Found event: {current_event.title}")
 
-        # Perform check-in
-        attendance = await attendance_service.manual_check_in(
+        # Perform check-in - returns dict (Session-safe)
+        attendance_data = await attendance_service.manual_check_in(
             user_id=current_user.id,
             event_id=current_event.id,
             check_in_time=None  # Use current time
         )
 
-        # Get status value - handle both enum and string
-        status_value = attendance.status.value if hasattr(attendance.status, 'value') else str(attendance.status)
+        # Get status value - already a string from dict
+        status_value = attendance_data["status"]
         was_late = status_value.upper() == "LATE"
 
         # Log successful check-in
@@ -588,12 +588,12 @@ async def quick_check_in(
         return {
             "success": True,
             "data": {
-                "id": str(attendance.id),
-                "userId": str(attendance.user_id),
-                "eventId": str(attendance.event_id),
+                "id": str(attendance_data["id"]),
+                "userId": str(attendance_data["user_id"]),
+                "eventId": str(attendance_data["event_id"]),
                 "eventTitle": current_event.title,
                 "status": status_value.lower(),
-                "checkInTime": attendance.check_in_time.isoformat() if attendance.check_in_time else None,
+                "checkInTime": attendance_data["check_in_time"].isoformat() if attendance_data["check_in_time"] else None,
                 "wasLate": was_late,
                 "message": f"成功簽到：{current_event.title}" + (" (遲到)" if was_late else "")
             }
@@ -644,33 +644,23 @@ async def manual_check_in_with_event(
         Check-in result with attendance record
     """
     try:
-        attendance = await attendance_service.manual_check_in(
+        # Service returns dict (Session-safe)
+        attendance_data = await attendance_service.manual_check_in(
             user_id=current_user.id,
             event_id=checkin_request.event_id,
             check_in_time=checkin_request.check_in_time
         )
 
-        # Extract all fields immediately while session is still active
-        # This prevents lazy loading issues after session closes
-        attendance_data = {
-            "id": attendance.id,
-            "user_id": attendance.user_id,
-            "event_id": attendance.event_id,
-            "status": attendance.status,  # Enum value
-            "check_in_time": attendance.check_in_time,
-            "note": attendance.note,
-            "created_at": attendance.created_at,
-            "updated_at": attendance.updated_at
-        }
-
-        was_late = (attendance.status == AttendanceStatus.LATE)
+        # Status is already a string from dict
+        status_value = attendance_data["status"]
+        was_late = (status_value.upper() == "LATE")
 
         # Log successful check-in
         import logging
         logger = logging.getLogger(__name__)
         logger.info(
             f"User {current_user.id} checked in to event {checkin_request.event_id}, "
-            f"status: {attendance.status.value if hasattr(attendance.status, 'value') else attendance.status}"
+            f"status: {status_value}"
         )
 
         return CheckInResponse(

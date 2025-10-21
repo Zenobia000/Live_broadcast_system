@@ -124,7 +124,7 @@ class AttendanceRepository:
         event_id: int,
         check_in_time: datetime,
         is_late: bool = False
-    ) -> Attendance:
+    ) -> dict:
         """Check in user for an event.
 
         Args:
@@ -134,7 +134,7 @@ class AttendanceRepository:
             is_late: Whether check-in is late
 
         Returns:
-            Updated attendance record
+            Dict with attendance data (to avoid Session issues)
 
         Raises:
             ValueError: If attendance record doesn't exist
@@ -156,7 +156,18 @@ class AttendanceRepository:
                 attendance.mark_present(check_in_time)
             attendance = await self.update(attendance)
 
-        return attendance
+        # Extract all data while session is still active
+        # This prevents DetachedInstanceError when session closes
+        return {
+            "id": attendance.id,
+            "user_id": attendance.user_id,
+            "event_id": attendance.event_id,
+            "status": attendance.status.value if hasattr(attendance.status, 'value') else str(attendance.status),
+            "check_in_time": attendance.check_in_time,
+            "note": attendance.note,
+            "created_at": attendance.created_at,
+            "updated_at": attendance.updated_at
+        }
 
     async def mark_as_leave(
         self,

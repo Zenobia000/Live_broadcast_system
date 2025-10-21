@@ -86,7 +86,7 @@ class AttendanceService:
         user_id: int,
         event_id: int,
         check_in_time: Optional[datetime] = None
-    ) -> Attendance:
+    ) -> dict:
         """Manual check-in for specific event.
 
         Args:
@@ -95,7 +95,7 @@ class AttendanceService:
             check_in_time: Check-in time (default: now, timezone-aware)
 
         Returns:
-            Updated attendance record
+            Dict with attendance data (Session-safe)
 
         Raises:
             ValueError: If event not found or invalid check-in
@@ -116,6 +116,7 @@ class AttendanceService:
         # Determine if check-in is late
         is_late = event.is_late_checkin(check_in_time)
 
+        # Repository returns dict to avoid Session issues
         return await self.attendance_repository.check_in_user(
             user_id=user_id,
             event_id=event_id,
