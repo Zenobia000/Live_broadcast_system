@@ -3,18 +3,54 @@ import { useNavigate } from 'react-router-dom'
 import { Card, CardHeader, CardBody, Button, Badge, showToast, LoadingSpinner } from '../components'
 import { api, EventAttendanceOverview } from '../services/api'
 
+type TimeFilter = 'week' | 'month' | 'quarter' | 'year'
+
 export default function AttendanceManagementPage() {
   const navigate = useNavigate()
   const [events, setEvents] = useState<EventAttendanceOverview[]>([])
   const [loading, setLoading] = useState(true)
   const [selectedEvent, setSelectedEvent] = useState<number | null>(null)
   const [refreshing, setRefreshing] = useState(false)
+  const [timeFilter, setTimeFilter] = useState<TimeFilter>('month')
+
+  // Calculate date range based on filter
+  const getDateRange = (filter: TimeFilter) => {
+    const now = new Date()
+    const endDate = now.toISOString()
+    let startDate: string
+
+    switch (filter) {
+      case 'week':
+        const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000)
+        startDate = weekAgo.toISOString()
+        break
+      case 'month':
+        const monthAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000)
+        startDate = monthAgo.toISOString()
+        break
+      case 'quarter':
+        const quarterAgo = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000)
+        startDate = quarterAgo.toISOString()
+        break
+      case 'year':
+        const yearAgo = new Date(now.getTime() - 365 * 24 * 60 * 60 * 1000)
+        startDate = yearAgo.toISOString()
+        break
+    }
+
+    return { startDate, endDate }
+  }
 
   // Fetch attendance overview
   const fetchAttendanceOverview = async () => {
     try {
       setLoading(true)
-      const response = await api.getAttendanceOverview({ limit: 50 })
+      const { startDate, endDate } = getDateRange(timeFilter)
+      const response = await api.getAttendanceOverview({
+        startDate,
+        endDate,
+        limit: 100
+      })
 
       if (response.success && response.data) {
         // Backend returns { success: true, data: [...], total: N }
@@ -49,10 +85,10 @@ export default function AttendanceManagementPage() {
     })
   }
 
-  // Initial load
+  // Initial load and when filter changes
   useEffect(() => {
     fetchAttendanceOverview()
-  }, [])
+  }, [timeFilter])
 
   // Format date for display
   const formatDateTime = (dateStr: string) => {
@@ -91,7 +127,7 @@ export default function AttendanceManagementPage() {
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
       {/* Header */}
       <header className="bg-white dark:bg-gray-800 shadow-sm sticky top-0 z-10">
-        <div className="max-w-6xl mx-auto px-4 py-4">
+        <div className="max-w-6xl mx-auto px-4 py-4 space-y-3">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-2">
               <Button
@@ -121,6 +157,31 @@ export default function AttendanceManagementPage() {
             >
               {refreshing ? '更新中...' : '🔄 重新整理'}
             </Button>
+          </div>
+
+          {/* Time Filter */}
+          <div className="flex items-center space-x-2">
+            <span className="text-sm text-gray-600 dark:text-gray-400">時間範圍：</span>
+            <div className="flex space-x-2">
+              {[
+                { value: 'week' as TimeFilter, label: '最近一週' },
+                { value: 'month' as TimeFilter, label: '最近一月' },
+                { value: 'quarter' as TimeFilter, label: '最近一季' },
+                { value: 'year' as TimeFilter, label: '最近一年' }
+              ].map(({ value, label }) => (
+                <button
+                  key={value}
+                  onClick={() => setTimeFilter(value)}
+                  className={`px-3 py-1 rounded-md text-sm font-medium transition-colors ${
+                    timeFilter === value
+                      ? 'bg-blue-600 text-white'
+                      : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
+                  }`}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
           </div>
         </div>
       </header>
@@ -195,7 +256,7 @@ export default function AttendanceManagementPage() {
                   <div className="flex items-start justify-between">
                     <div className="flex-1">
                       <div className="flex items-center space-x-3 mb-2">
-                        <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                        <h3 className="text-lg font-semibold text-blue-700 dark:text-blue-400">
                           {event.title}
                         </h3>
                         <Badge variant="default" size="sm">

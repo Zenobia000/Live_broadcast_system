@@ -34,6 +34,16 @@ const CreateEventPage: React.FC = () => {
       return
     }
 
+    // Validate participants required
+    if (formData.participantIds.length === 0) {
+      showToast({
+        type: 'warning',
+        message: '請至少選擇一位參與者',
+        autoClose: 3000
+      })
+      return
+    }
+
     // Validate end time after start time
     if (!isEndTimeAfterStart(formData.startDate, formData.startTime, formData.endDate, formData.endTime)) {
       showToast({
@@ -208,14 +218,18 @@ const CreateEventPage: React.FC = () => {
 
               {/* Participants */}
               <FormSection>
-                <FormLabel>邀請參與者</FormLabel>
+                <FormLabel required>邀請參與者</FormLabel>
                 <UserSelector
                   selectedIds={formData.participantIds}
                   onChange={(ids) => setFormData(prev => ({ ...prev, participantIds: ids }))}
                 />
-                {formData.participantIds.length === 0 && (
-                  <p className="text-xs text-amber-600 dark:text-amber-400 mt-2">
-                    提示：未選擇參與者時，所有成員都可以簽到
+                {formData.participantIds.length === 0 ? (
+                  <p className="text-xs text-red-600 dark:text-red-400 mt-2">
+                    ⚠️ 請至少選擇一位參與者
+                  </p>
+                ) : (
+                  <p className="text-xs text-green-600 dark:text-green-400 mt-2">
+                    ✓ 已選擇 {formData.participantIds.length} 位參與者
                   </p>
                 )}
               </FormSection>

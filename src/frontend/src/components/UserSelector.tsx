@@ -46,6 +46,18 @@ const UserSelector: React.FC<UserSelectorProps> = ({ selectedIds, onChange }) =>
     user.email.toLowerCase().includes(searchQuery.toLowerCase())
   )
 
+  const handleSelectAll = () => {
+    const allFilteredIds = filteredUsers.map(user => Number(user.id))
+    onChange(allFilteredIds)
+  }
+
+  const handleDeselectAll = () => {
+    onChange([])
+  }
+
+  const isAllSelected = filteredUsers.length > 0 &&
+    filteredUsers.every(user => selectedIds.includes(Number(user.id)))
+
   if (loading) {
     return (
       <div className="flex justify-center py-8">
@@ -64,6 +76,26 @@ const UserSelector: React.FC<UserSelectorProps> = ({ selectedIds, onChange }) =>
         onChange={(e) => setSearchQuery(e.target.value)}
         className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
       />
+
+      {/* Select All / Deselect All */}
+      <div className="flex items-center justify-between">
+        <button
+          type="button"
+          onClick={handleSelectAll}
+          disabled={filteredUsers.length === 0}
+          className="text-sm text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 disabled:text-gray-400 disabled:cursor-not-allowed"
+        >
+          ✓ 全選
+        </button>
+        <button
+          type="button"
+          onClick={handleDeselectAll}
+          disabled={selectedIds.length === 0}
+          className="text-sm text-gray-600 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 disabled:text-gray-400 disabled:cursor-not-allowed"
+        >
+          ✗ 全不選
+        </button>
+      </div>
 
       {/* User List */}
       <div className="max-h-60 overflow-y-auto border border-gray-200 dark:border-gray-600 rounded-lg">

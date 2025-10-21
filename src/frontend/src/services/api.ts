@@ -30,6 +30,13 @@ export interface AttendanceStatus {
   updatedAt: string
 }
 
+export interface AvailableEvent {
+  id: string
+  title: string
+  startTime: string
+  endTime: string
+}
+
 export interface TodayStatus {
   isCheckedIn: boolean
   checkInTime?: string
@@ -39,6 +46,7 @@ export interface TodayStatus {
   eventEndTime?: string
   nextEventTime?: string
   status: 'present' | 'absent' | 'late' | 'waiting'
+  availableEvents?: AvailableEvent[]
 }
 
 export interface LeaveRequest {
@@ -288,9 +296,18 @@ class ApiClient {
     return response.data
   }
 
-  async manualCheckIn(): Promise<ApiResponse<AttendanceStatus>> {
-    const response = await this.client.post('/attendance/checkin')
-    return response.data
+  async manualCheckIn(eventId?: string): Promise<ApiResponse<AttendanceStatus>> {
+    if (eventId) {
+      // Use /checkin-event endpoint with specific event ID
+      const response = await this.client.post('/attendance/checkin-event', {
+        event_id: Number(eventId)
+      })
+      return response.data
+    } else {
+      // Use /checkin endpoint (auto-detect current event)
+      const response = await this.client.post('/attendance/checkin')
+      return response.data
+    }
   }
 
   async autoCheckInFromCalendar(): Promise<ApiResponse<{
@@ -477,7 +494,7 @@ export const api = {
   // Attendance
   getTodayStatus: () => apiClient.getTodayStatus(),
   getAttendanceHistory: (limit?: number) => apiClient.getAttendanceHistory(limit),
-  manualCheckIn: () => apiClient.manualCheckIn(),
+  manualCheckIn: (eventId?: string) => apiClient.manualCheckIn(eventId),
   autoCheckInFromCalendar: () => apiClient.autoCheckInFromCalendar(),
 
   // Calendar

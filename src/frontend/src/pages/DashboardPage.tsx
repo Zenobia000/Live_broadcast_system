@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { Card, CardBody, Button, Badge, LoadingSpinner, CardSkeleton, showToast, AttendanceHeatmap } from '../components'
-import { api, TodayStatus, AttendanceStatus, User } from '../services/api'
+import { api, TodayStatus, AttendanceStatus, User, AvailableEvent } from '../services/api'
 import { SmartURLGenerator } from '../utils/navigation'
 
 const DashboardPage: React.FC = () => {
@@ -229,9 +229,9 @@ const DashboardPage: React.FC = () => {
     }
   }
 
-  const handleManualCheckIn = async () => {
+  const handleManualCheckIn = async (eventId?: string) => {
     try {
-      const response = await api.manualCheckIn()
+      const response = await api.manualCheckIn(eventId)
       if (response.success) {
         showToast({
           type: 'success',
@@ -298,7 +298,68 @@ const DashboardPage: React.FC = () => {
     }
 
     const config = statusConfig[todayStatus.status] || statusConfig.waiting
+    const availableEvents = todayStatus.availableEvents || []
 
+    // If there are multiple available events, show them as a list
+    if (availableEvents.length > 0) {
+      return (
+        <div className="space-y-3">
+          {/* Status Summary */}
+          <Card className={`${config.bgColor} ${config.borderColor} border-2`}>
+            <CardBody>
+              <div className="flex items-center space-x-3">
+                <div className="text-3xl">{config.icon}</div>
+                <div>
+                  <div className={`text-lg font-semibold ${config.textColor}`}>
+                    {todayStatus.isCheckedIn ? `${config.text}：${todayStatus.eventTitle}` : '可簽到會議'}
+                  </div>
+                  <div className="text-sm text-gray-600 dark:text-gray-400">
+                    {availableEvents.length} 個會議可簽到
+                  </div>
+                </div>
+              </div>
+            </CardBody>
+          </Card>
+
+          {/* Available Events List */}
+          <div className="space-y-2">
+            {availableEvents.map((event) => (
+              <Card key={event.id} className="hover:shadow-md transition-shadow">
+                <CardBody className="flex items-center justify-between">
+                  <div className="flex-1">
+                    <div className="font-medium text-gray-900 dark:text-white">
+                      {event.title}
+                    </div>
+                    <div className="text-sm text-gray-600 dark:text-gray-400">
+                      {event.startTime} - {event.endTime}
+                    </div>
+                  </div>
+                  <div className="flex gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={handleForceAutoCheckIn}
+                      className="flex items-center gap-1"
+                    >
+                      <span>📅</span> Calendar
+                    </Button>
+                    <Button
+                      variant="primary"
+                      size="sm"
+                      onClick={() => handleManualCheckIn(event.id)}
+                    >
+                      簽到
+                    </Button>
+                  </div>
+                </CardBody>
+              </Card>
+            ))}
+          </div>
+        </div>
+      )
+    }
+
+    // Original single event display
     return (
       <Card className={`${config.bgColor} ${config.borderColor} border-2`}>
         <CardBody className="flex items-center justify-between">
@@ -333,7 +394,7 @@ const DashboardPage: React.FC = () => {
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={handleManualCheckIn}
+                  onClick={() => handleManualCheckIn()}
                 >
                   手動簽到
                 </Button>

@@ -57,6 +57,45 @@ async def get_today_status(
     today_start = datetime.combine(today, time.min, tzinfo=TAIPEI_TZ).astimezone(timezone.utc)
     today_end = datetime.combine(today, time.max, tzinfo=TAIPEI_TZ).astimezone(timezone.utc)
 
+    # Get all available events for check-in (will be included in all responses)
+    from app.core.config import settings
+    EARLY_CHECKIN_MINUTES = settings.EARLY_CHECKIN_MINUTES
+    early_checkin_time = now_utc + timedelta(minutes=EARLY_CHECKIN_MINUTES)
+
+    # Subquery to get events user has already checked in to
+    attended_events_subquery = (
+        select(Attendance.event_id)
+        .where(Attendance.user_id == current_user.id)
+    )
+
+    # Query all available events for check-in
+    available_events_query = (
+        select(Event)
+        .where(
+            and_(
+                Event.id.not_in(attended_events_subquery),  # Not already checked in
+                Event.start_time <= early_checkin_time,  # Allow early check-in
+                Event.end_time >= now_utc  # Event hasn't ended yet
+            )
+        )
+        .order_by(Event.start_time.asc())
+    )
+
+    available_events_result = await db.execute(available_events_query)
+    available_events = available_events_result.scalars().all()
+
+    # Format available events for response
+    available_events_list = []
+    for evt in available_events:
+        evt_start_taipei = evt.start_time.astimezone(TAIPEI_TZ)
+        evt_end_taipei = evt.end_time.astimezone(TAIPEI_TZ)
+        available_events_list.append({
+            "id": str(evt.id),
+            "title": evt.title,
+            "startTime": evt_start_taipei.strftime("%H:%M"),
+            "endTime": evt_end_taipei.strftime("%H:%M")
+        })
+
     query = (
         select(Attendance, Event)
         .join(Event, Attendance.event_id == Event.id)
@@ -123,7 +162,8 @@ async def get_today_status(
                 "eventStartTime": next_event_start_taipei.strftime("%H:%M"),
                 "eventEndTime": next_event_end_taipei.strftime("%H:%M"),
                 "nextEventTime": None,
-                "status": "waiting"  # Can check in to next event
+                "status": "waiting",  # Can check in to next event
+                "availableEvents": available_events_list
             }
 
         # No more events today
@@ -132,7 +172,8 @@ async def get_today_status(
             "checkInTime": check_in_taipei.strftime("%H:%M") if check_in_taipei else None,
             "eventTitle": event.title,
             "nextEventTime": None,
-            "status": "late" if attendance.status == "late" else "present"
+            "status": "late" if attendance.status == "late" else "present",
+            "availableEvents": available_events_list
         }
 
     # No check-in today, first check for CURRENT or UPCOMING events (within early check-in window)
@@ -200,7 +241,8 @@ async def get_today_status(
             "eventStartTime": event_start_taipei.strftime("%H:%M"),
             "eventEndTime": event_end_taipei.strftime("%H:%M"),
             "nextEventTime": None,
-            "status": "waiting"
+            "status": "waiting",
+            "availableEvents": available_events_list
         }
         logger.info(f"[Attendance] Returning current event response: {result}")
         return result
@@ -232,7 +274,8 @@ async def get_today_status(
         "checkInTime": None,
         "eventTitle": None,
         "nextEventTime": next_event_time_str,
-        "status": "waiting"
+        "status": "waiting",
+        "availableEvents": available_events_list
     }
     logger.info(f"[Attendance] Returning no current event response: {result}")
     return result
