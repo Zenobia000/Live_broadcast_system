@@ -14,7 +14,7 @@ export interface User {
   email: string
   name: string
   avatar?: string
-  role: 'user' | 'admin'
+  role: 'user' | 'admin' | 'MEMBER' | 'ADMIN'
   createdAt: string
   updatedAt: string
 }

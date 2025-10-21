@@ -377,7 +377,7 @@ const DashboardPage: React.FC = () => {
           </CardBody>
         </Card>
 
-        {userRole === 'admin' && (
+        {(userRole === 'admin' || userRole === 'ADMIN') && (
           <Card className="hover:shadow-lg transition-shadow cursor-pointer"
                 onClick={() => window.location.href = '/admin'}>
             <CardBody className="text-center">
