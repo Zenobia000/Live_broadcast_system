@@ -219,7 +219,7 @@ export default function AttendanceManagementPage() {
                     {/* Statistics */}
                     <div className="flex items-center space-x-4 ml-4">
                       <div className="text-center">
-                        <div className="text-2xl font-bold text-gray-900 dark:text-white">
+                        <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">
                           {event.statistics.expected_count}
                         </div>
                         <div className="text-xs text-gray-600 dark:text-gray-400">應到</div>

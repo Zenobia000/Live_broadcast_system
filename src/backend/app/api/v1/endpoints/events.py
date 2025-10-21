@@ -287,63 +287,50 @@ async def get_attendance_overview(
         attendances = event.attendances
         attendance_by_user = {a.user_id: a for a in attendances if not a.deleted_at}
 
-        # Categorize users
+        # Collect all users who should attend (expected) and who actually attended
         attended_users = []
         absent_users = []
+        expected_users_set = set()  # Track all expected attendees
 
-        # If there are participants defined, use them as the base
-        if participants:
-            for participant in participants:
-                user = participant.user
-                attendance = attendance_by_user.get(user.id)
-
-                user_info = {
+        # Step 1: Collect all actually attended users (from attendance records)
+        for attendance in attendances:
+            if attendance.is_present_or_late:
+                user = attendance.user
+                attended_users.append({
                     "id": user.id,
                     "name": user.name,
                     "email": user.email,
-                    "avatar_url": user.avatar_url
-                }
+                    "avatar_url": user.avatar_url,
+                    "status": attendance.status.value if hasattr(attendance.status, 'value') else str(attendance.status),
+                    "check_in_time": attendance.check_in_time.isoformat() if attendance.check_in_time else None
+                })
+                expected_users_set.add(user.id)  # Anyone who attended should be in expected
 
-                if attendance and attendance.is_present_or_late:
-                    # User checked in
-                    attended_users.append({
-                        **user_info,
-                        "status": attendance.status.value if hasattr(attendance.status, 'value') else str(attendance.status),
-                        "check_in_time": attendance.check_in_time.isoformat() if attendance.check_in_time else None
-                    })
-                else:
-                    # User did not check in (or has excused absence)
+        # Step 2: Add participants to expected users
+        if participants:
+            for participant in participants:
+                user = participant.user
+                expected_users_set.add(user.id)
+
+                # If participant didn't check in, add to absent list
+                if user.id not in [u["id"] for u in attended_users]:
+                    attendance = attendance_by_user.get(user.id)
                     status = "absent"
                     if attendance:
                         status = attendance.status.value if hasattr(attendance.status, 'value') else str(attendance.status)
 
                     absent_users.append({
-                        **user_info,
+                        "id": user.id,
+                        "name": user.name,
+                        "email": user.email,
+                        "avatar_url": user.avatar_url,
                         "status": status
                     })
-        else:
-            # No participants defined - use actual attendance records
-            for attendance in attendances:
-                user = attendance.user
-                user_info = {
-                    "id": user.id,
-                    "name": user.name,
-                    "email": user.email,
-                    "avatar_url": user.avatar_url
-                }
 
-                if attendance.is_present_or_late:
-                    attended_users.append({
-                        **user_info,
-                        "status": attendance.status.value if hasattr(attendance.status, 'value') else str(attendance.status),
-                        "check_in_time": attendance.check_in_time.isoformat() if attendance.check_in_time else None
-                    })
-                else:
-                    status = attendance.status.value if hasattr(attendance.status, 'value') else str(attendance.status)
-                    absent_users.append({
-                        **user_info,
-                        "status": status
-                    })
+        # Calculate counts
+        expected_count = len(expected_users_set)
+        attended_count = len(attended_users)
+        absent_count = expected_count - attended_count
 
         # Convert event times to Taipei timezone for display
         TAIPEI_TZ = timezone(timedelta(hours=8))
@@ -358,9 +345,9 @@ async def get_attendance_overview(
             "end_time": end_taipei.isoformat(),
             "grace_period_minutes": event.grace_period_minutes,
             "statistics": {
-                "expected_count": len(participants),
-                "attended_count": len(attended_users),
-                "absent_count": len(absent_users)
+                "expected_count": expected_count,
+                "attended_count": attended_count,
+                "absent_count": absent_count
             },
             "attended_users": attended_users,
             "absent_users": absent_users
