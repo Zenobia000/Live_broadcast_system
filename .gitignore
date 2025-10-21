@@ -301,3 +301,5 @@ tags
 
 ## 保留目錄結構的檔案
 # 確保空目錄被保留但不包含內容
+# Database backups (may contain sensitive data)
+backups/
