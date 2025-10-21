@@ -64,7 +64,7 @@ class AttendanceWithDetails(AttendanceResponse):
 class CheckInRequest(BaseModel):
     """Schema for manual check-in request."""
 
-    event_id: UUID = Field(..., description="Event ID to check in for")
+    event_id: int = Field(..., description="Event ID to check in for")
     check_in_time: Optional[datetime] = Field(
         None,
         description="Check-in time (default: current time)"
