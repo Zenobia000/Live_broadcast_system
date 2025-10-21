@@ -27,8 +27,8 @@ class AttendanceBase(BaseModel):
 class AttendanceCreate(AttendanceBase):
     """Schema for creating attendance record."""
 
-    user_id: UUID = Field(..., description="User ID")
-    event_id: UUID = Field(..., description="Event ID")
+    user_id: int = Field(..., description="User ID")
+    event_id: int = Field(..., description="Event ID")
 
 
 class AttendanceUpdate(BaseModel):
@@ -41,9 +41,9 @@ class AttendanceUpdate(BaseModel):
 class AttendanceResponse(AttendanceBase):
     """Schema for attendance API responses."""
 
-    id: UUID = Field(..., description="Attendance record ID")
-    user_id: UUID = Field(..., description="User ID")
-    event_id: UUID = Field(..., description="Event ID")
+    id: int = Field(..., description="Attendance record ID")
+    user_id: int = Field(..., description="User ID")
+    event_id: int = Field(..., description="Event ID")
     created_at: datetime = Field(..., description="Record creation time")
     updated_at: datetime = Field(..., description="Record last update time")
 
